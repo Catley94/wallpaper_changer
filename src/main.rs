@@ -19,13 +19,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Search query: {}", search_query);
 
-    let body = ureq::get(&search_query)
+    let response = ureq::get(&search_query)
         .header("User-Agent", "wallpaper_changer/0.0.1")
         .call()?
         .body_mut()
-        .read_json::<wall_haven_models::WHResponse>();
+        .read_json::<wall_haven_models::WHResponse>()?;
 
-    println!("{:?}", body);
+    if let Some(first_image) = response.data.first() {
+        println!("First image URL: {}", first_image.url);
+        println!("First image path: {}", first_image.path);
+        println!("First image thumbnail: {}", first_image.thumbs.small);
+    }
+
+    // println!("{:?}", response);
 
 
     Ok(())
