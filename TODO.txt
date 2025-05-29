@@ -1,0 +1,13 @@
+- Be able to search WallHaven.cc with search api and custom query
+- Be able to change wallpaper on Linux (Debian/Ubuntu, Fedora and Arch)
+- Gather top 20 thumbnail images and save thumbnail images to tmp/cache folder
+    - Add a way to move 'next' and 'previous' to get the next 20 thumbnail images
+    - After a period of time, clear cache folder
+- Create a GUI that displays the currently active 20 thumbnail images
+- User to click one image which changes the background image
+- Add the option for a timer or randomiser to choose a picture from the search query
+
+
+
+README Dependancies:
+(Ubuntu apt) pkg-config libssl-dev
