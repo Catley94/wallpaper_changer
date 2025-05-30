@@ -1,1 +1,1 @@
-pub mod wall_haven_models;
+pub mod wallhaven;

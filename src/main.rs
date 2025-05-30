@@ -1,18 +1,13 @@
 use std::env;
-use std::fs::File;
-use std::collections::HashMap;
 use std::error::Error;
-use std::io::{Read, copy, Cursor};
+use std::io::{ Read };
 use std::path::PathBuf;
-use std::path::Path;
 
 mod wallpaper;
-
 mod models;
 mod download;
 
-use models::wall_haven_models;
-use crate::models::wall_haven_models::{WHImageData};
+use crate::models::wallhaven::{WHImageData};
 
 const WALLHAVEN_API: &str = "https://wallhaven.cc/api/v1";
 const WALLHAVEN_SEARCH_PARAM: &str = "search?q=";
@@ -39,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .header("User-Agent", "wallpaper_changer/0.0.1")
         .call()?
         .body_mut()
-        .read_json::<wall_haven_models::WHResponse>()?;
+        .read_json::<models::wallhaven::WHResponse>()?;
 
 
     println!("Images per page: {:?}", response.meta.per_page);
@@ -52,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     });
 
-    // Get the first image's details
+    // Get the first image's details - Test purposes
     if let Some(first_image) = response.data.first() {
 
         if let Ok(downloaded_image_path) = download::image::original(&first_image, &project_root.to_str().unwrap()) {
@@ -64,54 +59,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
         }
 
-        // Combine project root with the filename
-        // let path = project_root
-        //     .join(&first_image.id)
-        //     .to_str()
-        //     .ok_or("Failed to convert path to string").expect("Failed to convert path to string")
-        //     .to_string();
-
-        // println!("Path: {}", path);
-        //
-        // wallpaper::change(path.as_str());
-
     }
 
 
-
-    // println!("{:?}", response);
-
-    /*
-        TODO
-            1. Change wallpaper based upon first image as a test case
-            2. Collect all thumbnails from however many images on page (using meta data)
-     */
-
-    // 1. Change wallpaper
-    
-
-
-    // 1a. Support Windows / macos and Linux (Debian/Ubuntu, Fedora and Arch based)
+    // TODO: 1a. Support Windows / macos and Linux (Debian/Ubuntu, Fedora and Arch based)
 
     Ok(())
 }
 
-// fn download_image(image: &&WHImageData) -> Result<(), Box<dyn Error + Send + Sync>> {
-//     // Create the output file
-//     let mut image_file = File::create(format!("{}.png", &image.id)).expect("Failed to create file");
-//
-//     let image_request = ureq::get(&image.path)
-//         .call()?;
-//
-//     let (_, body) = image_request.into_parts();
-//
-//     let mut bytes_buf: Vec<u8> = Vec::with_capacity(1000);
-//
-//     body.into_reader()
-//         .read_to_end(&mut bytes_buf)?;
-//
-//     // // Copy the response body to the file
-//     copy(&mut Cursor::new(bytes_buf), &mut image_file)?;
-//     Ok(())
-// }
 

@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{copy, Cursor, Read};
 use std::path::Path;
-use crate::models::wall_haven_models::WHImageData;
+use crate::models::wallhaven::WHImageData;
 
 pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
     let file_path = format!("{}/{}_thumbnail_small.png", local_path, &image.id);
