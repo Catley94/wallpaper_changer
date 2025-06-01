@@ -21,11 +21,22 @@ const WALLHAVEN_SEARCH_PARAM: &str = "search?q=";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
-    // Get the project root path
-    // Temp Thumbnail folder for testing purposes
+    let is_cli = std::env::args().len() > 1;
     let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
     let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
 
+    if is_cli {
+        cli_mode(temp_thumbnail_folder, downloaded_images_folder)?;
+    } else {
+        // GUI - iced-rs?
+    }
+
+    Ok(())
+}
+
+fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -> Result<(), Box<dyn Error + Send + Sync>> {
+    // Get the project root path
+    // Temp Thumbnail folder for testing purposes
 
     let args: Vec<String> = env::args().collect();
 
@@ -34,7 +45,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let flag_id = args.iter().any(|arg| arg == "--id");
 
     if flag_change_wallpaper && flag_id {
-        
         let arg_id_value: Option<String> = args.iter()
             .position(|arg: &String| arg == "--id")
             .and_then(|index| args.get(index + 1))
@@ -68,20 +78,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             },
             Err(e) => println!("Error downloading image: {}", e)
         }
-
-
     } else {
-        let topic = &args[1];
-        let search_query = format!(
+
+        // TOPIC
+        // Download thumbnail images related to topic in temp_thumbs
+        // User will then choose background based upon ID
+        // Then pass in --change-wallpaper --id <id>
+
+        let arg_topic_value: Option<String> = args.iter()
+            .position(|arg: &String| arg == "--topic")
+            .and_then(|index| args.get(index + 1))
+            .map(|value: &String| value.to_string());
+
+
+        let search_query: String = format!(
             "{}/{}{}",
             WALLHAVEN_SEARCH_API,
             WALLHAVEN_SEARCH_PARAM,
-            topic
+            arg_topic_value.unwrap()
         );
 
         println!("Search query: {}", search_query);
 
         // Get response back from API with query
+        // Returns the page of 24 results
         let response = ureq::get(&search_query)
             .header("User-Agent", "wallpaper_changer/0.0.1")
             .call()?
@@ -95,38 +115,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut thumbnail_paths: Vec<String> = Vec::new();
 
         for image_data in response.data.iter() {
-            if let Ok(path) = download::image::thumbnail(&image_data, &temp_thumbnail_folder.to_str().unwrap().to_string()) {
-                // Download succeeded, use image_data's path or URL instead
-                thumbnail_paths.push(temp_thumbnail_folder.join(Path::new(&image_data.path).file_name().unwrap()).to_str().unwrap().to_string());
+            match download::image::thumbnail(&image_data, &temp_thumbnail_folder.to_str().unwrap().to_string()) {
+                Ok(_) => {
+                    // Download succeeded, use image_data's path or URL instead
+                    println!("Downloaded image path: {}", image_data.path);
+                    thumbnail_paths.push(temp_thumbnail_folder.join(Path::new(&image_data.path).file_name().unwrap()).to_str().unwrap().to_string());
+                },
+                Err(e) => println!("Error downloading image: {}", e),
             }
         }
-
-
 
 
         // Connect to activate and pass the thumbnail paths
         let paths = thumbnail_paths.clone();
-
-
-
-        // Get the first image's details - Test purposes
-        if let Some(first_image) = response.data.first() {
-
-            if let Ok(downloaded_image_path) = download::image::original(&first_image, &downloaded_images_folder.to_str().unwrap()) {
-                println!("Downloaded image path: {}", downloaded_image_path);
-
-                match wallpaper::change(downloaded_image_path.as_str()) {
-                    Ok(_) => println!("Wallpaper changed"),
-                    Err(e) => println!("Error changing wallpaper: {}", e)
-                }
-            }
-
-        }
     }
-
-
-    
-
     Ok(())
 }
 
