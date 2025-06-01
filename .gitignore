@@ -2,3 +2,5 @@
 .idea/modules.xml
 .idea/vcs.xml
 **/.idea
+/temp_thumbs/
+/downloaded_images/

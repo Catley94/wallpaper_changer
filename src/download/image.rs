@@ -35,7 +35,7 @@ pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn E
     Ok(())
 }
 
-pub fn original(image: &&WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
+pub fn original(image: &WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
     let file_path = format!("{}/{}_thumbnail_original.png", local_path, &image.id);
 
     // Check if file already exists

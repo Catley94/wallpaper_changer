@@ -2,12 +2,12 @@ use serde::{Serialize, Deserialize};
 
 
 #[derive(Debug, Deserialize)]
-pub struct WHResponse {
+pub struct WHSearchResponse {
     pub data: Vec<WHImageData>,
-    pub meta: WHMetaData,
+    pub meta: WHSearchMetaData,
 }
 #[derive(Debug, Deserialize)]
-pub struct WHMetaData {
+pub struct WHSearchMetaData {
     pub current_page: i32,
     pub last_page: i32,
     pub per_page: i8,
@@ -15,13 +15,52 @@ pub struct WHMetaData {
     pub query: String,
     pub seed: Option<String>,
 }
+
 #[derive(Debug, Deserialize)]
-pub struct WHImageData{
+pub struct WHDirectModel {
+    pub data: WHImageData,
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct WHTag {
+    pub id: i32,
+    pub name: String,
+    pub alias: String,
+    pub category_id: i32,
+    pub category: String,
+    pub purity: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WHAvatar {
+    #[serde(rename = "200px")]
+    pub px200: String,
+    #[serde(rename = "128px")]
+    pub px128: String,
+    #[serde(rename = "32px")]
+    pub px32: String,
+    #[serde(rename = "20px")]
+    pub px20: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WHUploader {
+    pub username: String,
+    pub group: String,
+    pub avatar: WHAvatar,
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct WHImageData {
     pub id: String,
     pub url: String,
     pub short_url: String,
-    pub views: i64,
-    pub favorites: i64,
+    pub uploader: WHUploader,
+    pub views: i32,
+    pub favorites: i32,
     pub source: String,
     pub purity: String,
     pub category: String,
@@ -29,13 +68,15 @@ pub struct WHImageData{
     pub dimension_y: i32,
     pub resolution: String,
     pub ratio: String,
-    pub file_size: i64,
+    pub file_size: i32,
     pub file_type: String,
     pub created_at: String,
     pub colors: Vec<String>,
     pub path: String,
-    pub thumbs:WHImageThumbnailImageData,
+    pub thumbs: WHImageThumbnailImageData,
+    pub tags: Vec<WHTag>,
 }
+
 
 #[derive(Debug, Deserialize)]
 pub struct WHImageThumbnailImageData {

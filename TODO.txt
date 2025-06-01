@@ -1,6 +1,6 @@
 - Be able to search WallHaven.cc with search api and custom query - Done
-- Be able to change wallpaper on Linux (Debian/Ubuntu, Fedora and Arch) 
-- Gather top 20 thumbnail images and save thumbnail images to tmp/cache folder
+- Be able to change wallpaper on Linux (Debian/Ubuntu, Fedora and Arch)  - Linux (Gnome - Done)
+- Gather top 20 thumbnail images and save thumbnail images to tmp/cache folder - Done
     - Add a way to move 'next' and 'previous' to get the next 20 thumbnail images
     - After a period of time, clear cache folder
 - Create a GUI that displays the currently active 20 thumbnail images
