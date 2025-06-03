@@ -1,2 +1,2 @@
 pub mod linux;
-mod windows;
+pub mod windows;
