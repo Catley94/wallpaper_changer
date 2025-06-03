@@ -46,6 +46,12 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
 
     let flag_topic = args.iter().any(|arg| arg == utils::flags::TOPIC);
     let flag_change_wallpaper = args.iter().any(|arg| arg == utils::flags::CHANGE_WALLPAPER);
+    let flag_page = args.iter().any(|arg| arg == utils::flags::PAGE);
+
+    if flag_page && !flag_change_wallpaper && !flag_topic ||
+        flag_page && flag_change_wallpaper && !flag_topic {
+        panic!("Error: --page flag must be used with --topic");
+    }
 
     if flag_change_wallpaper {
         let arg_id_value: Option<String> = args.iter()
@@ -53,10 +59,11 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
             .and_then(|index| args.get(index + 1))
             .map(|value: &String| value.to_string());
 
-        println!("ID: {:?}", arg_id_value);
+
 
         let change_wallpaper_search_query: String = match arg_id_value {
             Some(id) => {
+                println!("ID: {:?}", id);
                 format!(
                     "{}/{}",
                     WALLHAVEN_DIRECT_ID,
@@ -80,9 +87,9 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
         // println!("{:#?}", response);
 
 
-        println!("Image data: {:?}", response.data.path);
+        // println!("Image data: {:?}", response.data.path);
 
-        match download::image::original(&response.data, downloaded_images_folder.to_str().unwrap()) {
+        match download::image::original(&response.data, &downloaded_images_folder.to_str().unwrap()) {
             Ok(path) => {
                 println!("Downloaded image path: {}", path);
                 wallpaper::change(path.as_str()).unwrap();
@@ -120,6 +127,8 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
             },
             None => current_page,
         };
+        
+        println!("Current page: {}", current_page);
 
         let search_query: String = match arg_topic_value {
             Some(topic) => format!(
@@ -165,7 +174,7 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
 
 
         file_manager::linux::gnome::open(&temp_thumbnail_folder);
-        
+
     }
     Ok(())
 }
