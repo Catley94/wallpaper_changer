@@ -1,9 +1,10 @@
+use std::path::PathBuf;
 use std::process::Command;
 
-pub fn open () {
+pub fn open (path: &PathBuf) {
     // Open Nautilus (typically used in gnome)
     Command::new("nautilus")
-        .arg(temp_thumbnail_folder.as_os_str())
+        .arg(path.as_os_str())
         .spawn()
         .expect("Failed to open Nautilus");
 }

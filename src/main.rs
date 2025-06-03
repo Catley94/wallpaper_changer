@@ -164,11 +164,8 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
         }
 
 
-        file_manager::linux::gnome::open();
-
-
-        // Connect to activate and pass the thumbnail paths
-        let paths = thumbnail_paths.clone();
+        file_manager::linux::gnome::open(&temp_thumbnail_folder);
+        
     }
     Ok(())
 }
