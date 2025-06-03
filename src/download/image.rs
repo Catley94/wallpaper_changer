@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::models::wallhaven::WHImageData;
 
 pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let file_path = format!("{}/{}_thumbnail_small.png", local_path, &image.id);
+    let file_path = format!("{}/{}.png", local_path, &image.id);
 
     // Check if file already exists
     if Path::new(&file_path).exists() {
@@ -36,7 +36,7 @@ pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn E
 }
 
 pub fn original(image: &WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
-    let file_path = format!("{}/{}_thumbnail_original.png", local_path, &image.id);
+    let file_path = format!("{}/{}.png", local_path, &image.id);
 
     // Check if file already exists
     if Path::new(&file_path).exists() {

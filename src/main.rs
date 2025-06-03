@@ -3,18 +3,22 @@ use std::error::Error;
 use std::io::{ Read };
 use std::path::PathBuf;
 use std::path::Path;
+use std::process::Command;
 
 
 
 mod wallpaper;
 mod models;
 mod download;
+mod utils;
+mod file_manager;
 
 use crate::models::wallhaven::{WHImageData};
 
 const WALLHAVEN_DIRECT_ID: &str = "https://wallhaven.cc/api/v1/w";
 const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
 const WALLHAVEN_SEARCH_PARAM: &str = "search?q=";
+const WALLHAVEN_SEARCH_PAGE: &str = "page";
 
 
 
@@ -40,23 +44,30 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
 
     let args: Vec<String> = env::args().collect();
 
-    let flag_topic = args.iter().any(|arg| arg == "--topic");
-    let flag_change_wallpaper = args.iter().any(|arg| arg == "--change-wallpaper");
-    let flag_id = args.iter().any(|arg| arg == "--id");
+    let flag_topic = args.iter().any(|arg| arg == utils::flags::TOPIC);
+    let flag_change_wallpaper = args.iter().any(|arg| arg == utils::flags::CHANGE_WALLPAPER);
 
-    if flag_change_wallpaper && flag_id {
+    if flag_change_wallpaper {
         let arg_id_value: Option<String> = args.iter()
-            .position(|arg: &String| arg == "--id")
+            .position(|arg: &String| arg == utils::flags::CHANGE_WALLPAPER)
             .and_then(|index| args.get(index + 1))
             .map(|value: &String| value.to_string());
 
         println!("ID: {:?}", arg_id_value);
 
-        let change_wallpaper_search_query = format!(
-            "{}/{}",
-            WALLHAVEN_DIRECT_ID,
-            arg_id_value.unwrap()
-        );
+        let change_wallpaper_search_query: String = match arg_id_value {
+            Some(id) => {
+                format!(
+                    "{}/{}",
+                    WALLHAVEN_DIRECT_ID,
+                    id
+                )
+            },
+            None => {
+                println!("Error: No ID provided. Please use {} <id>", utils::flags::CHANGE_WALLPAPER);
+                return Ok(());
+            }
+        };
 
 
         // Get response back from API with query
@@ -66,7 +77,7 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
             .body_mut()
             .read_json::<models::wallhaven::WHDirectModel>()?;
 
-        println!("{:#?}", response);
+        // println!("{:#?}", response);
 
 
         println!("Image data: {:?}", response.data.path);
@@ -78,38 +89,65 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
             },
             Err(e) => println!("Error downloading image: {}", e)
         }
-    } else {
+    }
+
+    if flag_topic {
 
         // TOPIC
         // Download thumbnail images related to topic in temp_thumbs
         // User will then choose background based upon ID
         // Then pass in --change-wallpaper --id <id>
 
+        let mut current_page: String = "1".to_string();
+
         let arg_topic_value: Option<String> = args.iter()
-            .position(|arg: &String| arg == "--topic")
+            .position(|arg: &String| arg == utils::flags::TOPIC)
             .and_then(|index| args.get(index + 1))
             .map(|value: &String| value.to_string());
 
+        let arg_page_value: Option<String> = args.iter()
+            .position(|arg: &String| arg == utils::flags::PAGE)
+            .and_then(|index| args.get(index + 1))
+            .map(|value: &String| value.to_string());
 
-        let search_query: String = format!(
-            "{}/{}{}",
-            WALLHAVEN_SEARCH_API,
-            WALLHAVEN_SEARCH_PARAM,
-            arg_topic_value.unwrap()
-        );
+        let current_page: String = match arg_page_value {
+            Some(page) => {
+                if page.parse::<String>().is_ok() {
+                    page
+                } else {
+                    current_page
+                }
+            },
+            None => current_page,
+        };
+
+        let search_query: String = match arg_topic_value {
+            Some(topic) => format!(
+                "{}/{}{}&{}={}",
+                WALLHAVEN_SEARCH_API,
+                WALLHAVEN_SEARCH_PARAM,
+                topic,
+                WALLHAVEN_SEARCH_PAGE,
+                current_page
+            ),
+            None => {
+                println!("Error: No topic provided. Please use {} <search term>", utils::flags::TOPIC);
+                return Ok(());  // Exit the function early
+            }
+        };
 
         println!("Search query: {}", search_query);
 
         // Get response back from API with query
         // Returns the page of 24 results
         let response = ureq::get(&search_query)
-            .header("User-Agent", "wallpaper_changer/0.0.1")
+            .header("User-Agent", format!("wallpaper_changer/{}", env!("CARGO_PKG_VERSION")))
             .call()?
             .body_mut()
             .read_json::<models::wallhaven::WHSearchResponse>()?;
 
 
-        println!("Images per page: {:?}", response.meta.per_page);
+        println!("Images per page: {:?}", response.meta.last_page);
 
         // Collect thumbnail paths
         let mut thumbnail_paths: Vec<String> = Vec::new();
@@ -124,6 +162,9 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
                 Err(e) => println!("Error downloading image: {}", e),
             }
         }
+
+
+        file_manager::linux::gnome::open();
 
 
         // Connect to activate and pass the thumbnail paths

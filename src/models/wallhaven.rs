@@ -58,7 +58,8 @@ pub struct WHImageData {
     pub id: String,
     pub url: String,
     pub short_url: String,
-    pub uploader: WHUploader,
+    #[serde(default)]  // This will use Default::default() if the field is missing
+    pub uploader: Option<WHUploader>,  // Make uploader optional
     pub views: i32,
     pub favorites: i32,
     pub source: String,
@@ -74,7 +75,9 @@ pub struct WHImageData {
     pub colors: Vec<String>,
     pub path: String,
     pub thumbs: WHImageThumbnailImageData,
-    pub tags: Vec<WHTag>,
+    #[serde(default)]
+    pub tags: Option<Vec<WHTag>>,  // Make tags optional
+
 }
 
 
