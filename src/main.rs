@@ -76,6 +76,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .label("Search")
                 .build();
 
+            // Navigation controls box
+            let nav_box = gtk::Box::builder()
+                .orientation(gtk::Orientation::Horizontal)
+                .spacing(5)
+                .halign(gtk::Align::Center)
+                .margin_top(10)
+                .build();
+
+            let prev_button = Button::builder()
+                .label("Previous")
+                .sensitive(false)  // Disabled initially
+                .build();
+
+            let next_button = Button::builder()
+                .label("Next")
+                .sensitive(false)  // Disabled initially
+                .build();
+
+
+            let page_label = gtk::Label::new(Some("Page: 1"));
+
+            nav_box.append(&prev_button);
+            nav_box.append(&page_label);
+            nav_box.append(&next_button);
+
+
             search_box.append(&search_entry);
             search_box.append(&search_button);
 
@@ -95,91 +121,122 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             // Add everything to the main box
             main_box.append(&search_box);
+            main_box.append(&nav_box);
             main_box.append(&scroll_window);
             window.set_child(Some(&main_box));
 
-            // Handle search button clicks
+            // Set up state
+            let current_page = std::rc::Rc::new(std::cell::RefCell::new(1));
+            let current_search = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+
+            // Search button handler / Handle search button clicks
+            let current_page_clone = current_page.clone();
+            let current_search_clone = current_search.clone();
             let grid_clone = grid.clone();
             let temp_thumbnail_folder_search = temp_thumbnail_folder.clone();
+            let page_label_clone = page_label.clone();
+            let prev_button_clone = prev_button.clone();
+            let prev_button_clone2 = prev_button.clone();
+            let prev_button_clone3 = prev_button.clone();
+            let next_button_clone = next_button.clone();
+            // let search_text_prev = search_text.clone();
+
             search_button.connect_clicked(move |_| {
-                let temp_thumbnail_folder = temp_thumbnail_folder_search.clone();
                 let search_text = search_entry.text().to_string();
+                let temp_thumbnail_folder = &temp_thumbnail_folder_search;
+                let current_page_inner: u16 = current_page_clone.borrow().clone();
                 if !search_text.is_empty() {
+                    println!("Search button clicked: {}", search_text);
+
+                    *current_page_clone.borrow_mut() = 1;
+                    *current_search_clone.borrow_mut() = search_text.clone();
+
+                    // Update UI
+                    page_label_clone.set_text(&format!("Page: {}", current_page_clone.borrow()));
+                    prev_button_clone.set_sensitive(false);
+                    next_button_clone.set_sensitive(true);
+
+
                     // Clear existing thumbnails
                     while let Some(child) = grid_clone.first_child() {
                         grid_clone.remove(&child);
                     }
-                    println!("Search button clicked: {}", search_text);
                     // TODO: Implement search functionality using your existing API code
                     // You can reuse your existing wallhaven API code here
 
-                    let current_page: String = "1".to_string();
+
 
 
                     println!("Search input: {}", search_text);
 
 
-                    println!("Current page: {}", current_page);
+                    // println!("Current page: {}", current_page);
 
+                    update_grid(&grid_clone, &search_text, *current_page_clone.borrow(), temp_thumbnail_folder.clone());
 
-                    // Example: https://wallhaven.cc/api/v1/search?q=cats&page=1
-                    let search_query = match create_seach_query_object(Some(search_text), current_page) {
-                        Ok(value) => value,
-                        Err(_) => String::new()
-                    };
-
-                    println!("Search query: {}", search_query);
-
-                    // Get response back from API with query
-                    // Returns the page of 24 results
-                    let response: Option<WHSearchResponse> = match search_topic(&search_query) {
-                        Ok(response) => {
-                            // println!("Got response: {:?}", response);
-                            Some(response)
-                        }
-                        Err(e) => {
-                            eprintln!("Error: {}", e);
-                            None
-                        }
-                    };
-
-                    let mut thumbnail_paths: Vec<String> = Vec::new();
-
-                    if let Some(response_data) = response {
-                        for image_data in response_data.data.iter() {
-                            match download::image::thumbnail(&image_data, &temp_thumbnail_folder.to_str().unwrap()) {
-                                Ok(_) => {
-                                    // Download succeeded, use image_data's path or URL instead
-                                    // Construct the correct local thumbnail path
-                                    let local_thumbnail = format!("{}/wallhaven-{}.{}",
-                                                                  temp_thumbnail_folder.to_str().unwrap(),
-                                                                  image_data.id,
-                                                              utils::get_file_extension(&image_data.file_type)
-                                    );
-
-                                    // println!("Local Thumbnail: {}", &local_thumbnail);
-                                    thumbnail_paths.push(local_thumbnail);
-
-
-                                    println!("Downloaded image path: {}", image_data.path);
-
-                                    // self.thumbnails.push(self.temp_thumbs_dir.join(Path::new(&image_data.path).file_name().unwrap()).to_str().unwrap().to_string());
-                                },
-                                Err(e) => println!("Error downloading image: {}", e),
-                            }
-                        }
-                    }
+                    // let thumbnail_paths = parse_response(&temp_thumbnail_folder);
 
 
                     // add_image_to_grid(&grid_clone, &thumbnail_paths[0], 0, 0);
-                    thumbnail_paths.iter().enumerate().for_each(|(index, path)| {
-                        let row = index / 4; // Assuming 4 images per row
-                        let col = index % 4;
-                        add_image_to_grid(&grid_clone, path, row as i32, col as i32);
 
-                    });
 
                 }
+            });
+
+            // Previous button handler
+            let current_page_clone = current_page.clone();
+            let current_search_clone = current_search.clone();
+            let grid_clone = grid.clone();
+            let page_label_clone = page_label.clone();
+            let prev_button_clone = prev_button.clone();
+
+            let temp_thumbnail_folder_prev = temp_thumbnail_folder.clone();
+            let current_search_clone = current_search.clone();
+            prev_button.connect_clicked(move |_| {
+                let mut page = current_page_clone.borrow_mut();
+
+                if *page > 1 {
+                    *page -= 1;
+
+                    // Update UI
+                    page_label_clone.set_text(&format!("Page: {}", *page));
+                    prev_button_clone2.set_sensitive(*page > 1);
+
+                    // Clear existing thumbnails
+                    while let Some(child) = grid_clone.first_child() {
+                        grid_clone.remove(&child);
+                    }
+                    update_grid(&grid_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_prev.clone());
+                }
+            });
+
+            // Next button handler
+            let current_page_clone = current_page.clone();
+            let current_search_clone = current_search.clone();
+            let grid_clone = grid.clone();
+            let page_label_clone = page_label.clone();
+            let prev_button_clone = prev_button.clone();
+            let temp_thumbnail_folder_next = temp_thumbnail_folder.clone();
+
+            next_button.connect_clicked(move |button| {
+                let mut page = current_page_clone.borrow_mut();
+                *page += 1;
+
+                // Update UI
+                page_label_clone.set_text(&format!("Page: {}", *page));
+                // TODO; Get access to the final page in search response
+                button.set_sensitive(true);
+                prev_button_clone3.set_sensitive(*page > 1);
+
+                // Clear existing thumbnails
+                while let Some(child) = grid_clone.first_child() {
+                    grid_clone.remove(&child);
+                }
+                // println!("Current search clone: {}", current_search_clone.borrow())
+                update_grid(&grid_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_next.clone());
+
+
+
             });
 
             // Show the window.
@@ -195,6 +252,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     Ok(())
+}
+
+
+
+fn create_search_object_response(search_text: String, current_page_inner: u16) -> Option<WHSearchResponse> {
+    // Example: https://wallhaven.cc/api/v1/search?q=cats&page=1
+    let search_query = match create_seach_query_object(Some(search_text), current_page_inner.to_string()) {
+        Ok(value) => value,
+        Err(_) => String::new()
+    };
+
+    println!("Search query: {}", search_query);
+
+    // Get response back from API with query
+    // Returns the page of 24 results
+    let response: Option<WHSearchResponse> = match search_topic(&search_query) {
+        Ok(response) => {
+            // println!("Got response: {:?}", response);
+            Some(response)
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            None
+        }
+    };
+    response
 }
 
 fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -381,4 +464,56 @@ fn add_image_to_grid(grid: &Grid, image_path: &str, row: i32, col: i32) {
     let image = Image::from_file(image_path);
     image.set_size_request(200, 150); // Set thumbnail size
     grid.attach(&image, col, row, 1, 1);
+}
+
+
+fn update_grid(grid: &Grid, search_text: &str, page: u16, temp_thumbnail_folder: PathBuf) {
+    // Your existing logic to fetch and display images for the given page
+    // This should use your existing API call code and thumbnail display logic
+
+    // Example pseudo-code structure:
+    // let search_query = create_search_query_object(Some(search_text.to_string()), page.to_string());
+    let response = create_search_object_response(search_text.to_string(), page);
+
+    let thumbnail_paths = parse_response(response, &temp_thumbnail_folder);
+
+    thumbnail_paths.iter().enumerate().for_each(|(index, path)| {
+        let row = index / 4; // Assuming 4 images per row
+        let col = index % 4;
+        add_image_to_grid(&grid, path, row as i32, col as i32);
+
+    });
+
+    // Fetch images and update grid...
+    // Make sure to handle the API response and update the grid accordingly
+}
+
+fn parse_response(response: Option<models::wallhaven::WHSearchResponse>, temp_thumbnail_folder: &PathBuf) -> Vec<String> {
+    let mut thumbnail_paths: Vec<String> = Vec::new();
+
+    if let Some(response_data) = response {
+        for image_data in response_data.data.iter() {
+            match download::image::thumbnail(&image_data, &temp_thumbnail_folder.to_str().unwrap()) {
+                Ok(_) => {
+                    // Download succeeded, use image_data's path or URL instead
+                    // Construct the correct local thumbnail path
+                    let local_thumbnail = format!("{}/wallhaven-{}.{}",
+                                                  temp_thumbnail_folder.to_str().unwrap(),
+                                                  image_data.id,
+                                                  utils::get_file_extension(&image_data.file_type)
+                    );
+
+                    // println!("Local Thumbnail: {}", &local_thumbnail);
+                    thumbnail_paths.push(local_thumbnail);
+
+
+                    println!("Downloaded image path: {}", image_data.path);
+
+                    // self.thumbnails.push(self.temp_thumbs_dir.join(Path::new(&image_data.path).file_name().unwrap()).to_str().unwrap().to_string());
+                },
+                Err(e) => println!("Error downloading image: {}", e),
+            }
+        }
+    }
+    thumbnail_paths
 }
