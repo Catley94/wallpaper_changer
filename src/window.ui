@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkApplicationWindow" id="window">
+    <property name="title">Wallpaper Finder</property>
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <child>
+      <object class="GtkBox" id="main_box">
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+        <property name="margin-top">10</property>
+        <property name="margin-bottom">10</property>
+        <property name="margin-start">10</property>
+        <property name="margin-end">10</property>
+        <child>
+          <object class="GtkBox" id="search_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">5</property>
+            <child>
+              <object class="GtkEntry" id="search_entry">
+                <property name="placeholder-text">Enter search topic...</property>
+                <property name="hexpand">true</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="search_button">
+                <property name="label">Search</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="nav_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">5</property>
+            <property name="halign">center</property>
+            <property name="margin-top">10</property>
+            <child>
+              <object class="GtkButton" id="prev_button">
+                <property name="label">Previous</property>
+                <property name="sensitive">false</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="page_label">
+                <property name="label">Page: 1</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="next_button">
+                <property name="label">Next</property>
+                <property name="sensitive">false</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow" id="scroll_window">
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            <child>
+              <object class="GtkGrid" id="grid">
+
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

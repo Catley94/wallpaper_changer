@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use std::path::Path;
 use gtk4 as gtk;
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Entry, Button, Grid, Image};
+use gtk4::{Application, ApplicationWindow, Entry, Button, Grid, Image, Label, Builder, CssProvider, StyleContext};
+use gtk4::gdk::Display;
 use crate::models::wallhaven::WHSearchResponse;
 
 mod wallpaper;
@@ -18,7 +19,87 @@ const WALLHAVEN_DIRECT_ID: &str = "https://wallhaven.cc/api/v1/w";
 const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
 const WALLHAVEN_SEARCH_PARAM: &str = "search?q=";
 const WALLHAVEN_SEARCH_PAGE: &str = "page";
+const APP_ID: &str = "org.example.wallpaper_changer";
 
+
+#[derive(Default)]
+pub struct WallpaperWindow {
+    pub window: ApplicationWindow,
+    pub search_entry: Entry,
+    pub search_button: Button,
+    pub prev_button: Button,
+    pub next_button: Button,
+    pub page_label: Label,
+    pub grid: Grid,
+}
+
+impl WallpaperWindow {
+    pub fn new(app: &Application) -> Self {
+        // Load the UI file
+        let builder = Builder::from_string(include_str!("window.ui"));
+
+        // Get widgets from builder
+        let window: ApplicationWindow = builder.object("window").expect("Failed to get window");
+        window.set_application(Some(app));
+
+        let search_entry: Entry = builder.object("search_entry").expect("Failed to get search entry");
+        let search_button: Button = builder.object("search_button").expect("Failed to get search button");
+        let prev_button: Button = builder.object("prev_button").expect("Failed to get prev button");
+        let next_button: Button = builder.object("next_button").expect("Failed to get next button");
+        let page_label: Label = builder.object("page_label").expect("Failed to get page label");
+        let grid: Grid = builder.object("grid").expect("Failed to get grid");
+
+        // Load CSS
+        let provider = CssProvider::new();
+        provider.load_from_data(include_str!("style.css"));
+
+        // Add CSS provider to default screen
+        // gtk::style_context_add_provider_for_display(
+        //     &window.display(),
+        //     &provider,
+        //     gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        // );
+
+        // Add the provider to the default screen
+        gtk::style_context_add_provider_for_display(
+            &Display::default().expect("Could not connect to a display."),
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+
+        // if let Some(display) = gtk4::gdk::Display::default() {
+        //     StyleContext::add_provider_for_display(
+        //         &display,
+        //         &provider,
+        //         gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        //     );
+        // }
+
+
+        // StyleContext::add_provider_for_display(
+        //     &window.display(),
+        //     &provider,
+        //     gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        // );
+
+        // Add CSS classes to widgets
+        search_button.add_css_class("search_button");
+        prev_button.add_css_class("prev_button");
+        next_button.add_css_class("next_button");
+        page_label.add_css_class("page_label");
+        grid.add_css_class("image-grid");
+
+        Self {
+            window,
+            search_entry,
+            search_button,
+            prev_button,
+            next_button,
+            page_label,
+            grid,
+        }
+    }
+}
 
 
 #[tokio::main]
@@ -44,12 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         app.connect_activate(move |app| {
             // We create the main window.
             // Create the main window
-            let window = ApplicationWindow::builder()
-                .application(app)
-                .title("Wallpaper Finder")
-                .default_width(800)
-                .default_height(600)
-                .build();
+            let wallpaper_window = WallpaperWindow::new(app);
 
             // Create a vertical box for layout
             let main_box = gtk::Box::builder()
@@ -123,7 +199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             main_box.append(&search_box);
             main_box.append(&nav_box);
             main_box.append(&scroll_window);
-            window.set_child(Some(&main_box));
+            wallpaper_window.window.set_child(Some(&main_box));
 
             // Set up state
             let current_page = std::rc::Rc::new(std::cell::RefCell::new(1));
@@ -240,7 +316,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             });
 
             // Show the window.
-            window.present();
+            wallpaper_window.window.present();
         });
 
 
@@ -462,7 +538,9 @@ fn create_seach_query_object(arg_topic_value: Option<String>, current_page: Stri
 
 fn add_image_to_grid(grid: &Grid, image_path: &str, row: i32, col: i32) {
     let image = Image::from_file(image_path);
-    image.set_size_request(200, 150); // Set thumbnail size
+    image.set_size_request(150, 100); // Set thumbnail size
+    image.add_css_class("thumbnail-image");
+
     grid.attach(&image, col, row, 1, 1);
 }
 
