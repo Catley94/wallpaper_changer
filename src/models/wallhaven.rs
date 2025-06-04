@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
 
 #[derive(Debug, Deserialize)]
@@ -83,7 +83,7 @@ pub struct WHImageData {
 
 #[derive(Debug, Deserialize)]
 pub struct WHImageThumbnailImageData {
-    pub large: String,
-    pub original: String,
+    large: String,
+    original: String,
     pub small: String,
 }

@@ -1,9 +1,7 @@
 use std::env;
 use std::error::Error;
-use std::io::{ Read };
 use std::path::PathBuf;
 use std::path::Path;
-use std::process::Command;
 
 
 
@@ -13,9 +11,6 @@ mod download;
 mod utils;
 mod file_manager;
 mod help_information;
-
-use crate::models::wallhaven::{WHImageData};
-use crate::utils::flags;
 
 const WALLHAVEN_DIRECT_ID: &str = "https://wallhaven.cc/api/v1/w";
 const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
@@ -27,17 +22,10 @@ const WALLHAVEN_SEARCH_PAGE: &str = "page";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
-    // Get all arguments
-    let args: Vec<String> = env::args().collect();
-    // Check if user wants to view help information first
-    if args.iter().any(|arg| arg == utils::flags::HELP) {
-        help_information::display_help_information(args);
-        std::process::exit(0);
-    }
-    
-    let is_cli = std::env::args().len() > 1;
     let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
     let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
+
+    let is_cli = std::env::args().len() > 1;
 
     if is_cli {
         cli_mode(temp_thumbnail_folder, downloaded_images_folder)?;
@@ -53,6 +41,12 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
     // Temp Thumbnail folder for testing purposes
 
     let args: Vec<String> = env::args().collect();
+
+    if args.iter().any(|arg| arg == utils::flags::HELP) {
+        // User has passed in --help, display help information
+        help_information::display_help_information(args);
+        std::process::exit(0);
+    }
 
     let flag_topic = args.iter().any(|arg| arg == utils::flags::TOPIC);
     let flag_change_wallpaper = args.iter().any(|arg| arg == utils::flags::CHANGE_WALLPAPER);
@@ -115,19 +109,23 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
         // User will then choose background based upon ID
         // Then pass in --change-wallpaper --id <id>
 
-        let mut current_page: String = "1".to_string();
+        let current_page: String = "1".to_string();
 
+        // Get the value passed after --topic
         let arg_topic_value: Option<String> = args.iter()
             .position(|arg: &String| arg == utils::flags::TOPIC)
             .and_then(|index| args.get(index + 1))
             .map(|value: &String| value.to_string());
 
+        // Get the value passed after --page
         let arg_page_value: Option<String> = args.iter()
             .position(|arg: &String| arg == utils::flags::PAGE)
             .and_then(|index| args.get(index + 1))
             .map(|value: &String| value.to_string());
 
+        // If --page is passed, use that value, otherwise use the existing current_page value
         let current_page: String = match arg_page_value {
+            // Check the value is of Some<T> type and is a valid integer
             Some(page) => {
                 if page.parse::<String>().is_ok() {
                     page
@@ -140,6 +138,8 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
         
         println!("Current page: {}", current_page);
 
+
+        // Example: https://wallhaven.cc/api/v1/search?q=cats&page=1
         let search_query: String = match arg_topic_value {
             Some(topic) => format!(
                 "{}/{}{}&{}={}",

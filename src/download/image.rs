@@ -41,7 +41,7 @@ pub fn original(image: &WHImageData, local_path: &str) -> Result<String, Box<dyn
     // Check if file already exists
     if Path::new(&file_path).exists() {
         println!("File {} already exists, skipping download", file_path);
-        return Ok((file_path));
+        return Ok(file_path);
     }
     println!("Image ID: {}", image.id);
     println!("Image URL: {}", image.url);
