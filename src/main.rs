@@ -12,8 +12,10 @@ mod models;
 mod download;
 mod utils;
 mod file_manager;
+mod help_information;
 
 use crate::models::wallhaven::{WHImageData};
+use crate::utils::flags;
 
 const WALLHAVEN_DIRECT_ID: &str = "https://wallhaven.cc/api/v1/w";
 const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
@@ -25,6 +27,14 @@ const WALLHAVEN_SEARCH_PAGE: &str = "page";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
+    // Get all arguments
+    let args: Vec<String> = env::args().collect();
+    // Check if user wants to view help information first
+    if args.iter().any(|arg| arg == utils::flags::HELP) {
+        help_information::display_help_information(args);
+        std::process::exit(0);
+    }
+    
     let is_cli = std::env::args().len() > 1;
     let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
     let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
