@@ -2,8 +2,10 @@ use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 use std::path::Path;
-
-
+use gtk4 as gtk;
+use gtk4::prelude::*;
+use gtk4::{Application, ApplicationWindow, Entry, Button, Grid, Image};
+use crate::models::wallhaven::WHSearchResponse;
 
 mod wallpaper;
 mod models;
@@ -30,7 +32,166 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if is_cli {
         cli_mode(temp_thumbnail_folder, downloaded_images_folder)?;
     } else {
-        // GUI - iced-rs?
+        let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
+        let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
+        // GUI - gtk4
+
+        // Create a new application
+        let app = Application::builder()
+            .application_id("com.example.search")
+            .build();
+
+        app.connect_activate(move |app| {
+            // We create the main window.
+            // Create the main window
+            let window = ApplicationWindow::builder()
+                .application(app)
+                .title("Wallpaper Finder")
+                .default_width(800)
+                .default_height(600)
+                .build();
+
+            // Create a vertical box for layout
+            let main_box = gtk::Box::builder()
+                .orientation(gtk::Orientation::Vertical)
+                .spacing(10)
+                .margin_top(10)
+                .margin_bottom(10)
+                .margin_start(10)
+                .margin_end(10)
+                .build();
+
+            // Create search controls
+            let search_box = gtk::Box::builder()
+                .orientation(gtk::Orientation::Horizontal)
+                .spacing(5)
+                .build();
+
+            let search_entry = Entry::builder()
+                .placeholder_text("Enter search topic...")
+                .hexpand(true)
+                .build();
+
+            let search_button = Button::builder()
+                .label("Search")
+                .build();
+
+            search_box.append(&search_entry);
+            search_box.append(&search_button);
+
+            // Create scrollable grid for thumbnails
+            let scroll_window = gtk::ScrolledWindow::builder()
+                .hexpand(true)
+                .vexpand(true)
+                .build();
+
+            let grid = Grid::builder()
+                .row_spacing(10)
+                .column_spacing(10)
+                .margin_top(10)
+                .build();
+
+            scroll_window.set_child(Some(&grid));
+
+            // Add everything to the main box
+            main_box.append(&search_box);
+            main_box.append(&scroll_window);
+            window.set_child(Some(&main_box));
+
+            // Handle search button clicks
+            let grid_clone = grid.clone();
+            let temp_thumbnail_folder_search = temp_thumbnail_folder.clone();
+            search_button.connect_clicked(move |_| {
+                let temp_thumbnail_folder = temp_thumbnail_folder_search.clone();
+                let search_text = search_entry.text().to_string();
+                if !search_text.is_empty() {
+                    // Clear existing thumbnails
+                    while let Some(child) = grid_clone.first_child() {
+                        grid_clone.remove(&child);
+                    }
+                    println!("Search button clicked: {}", search_text);
+                    // TODO: Implement search functionality using your existing API code
+                    // You can reuse your existing wallhaven API code here
+
+                    let current_page: String = "1".to_string();
+
+
+                    println!("Search input: {}", search_text);
+
+
+                    println!("Current page: {}", current_page);
+
+
+                    // Example: https://wallhaven.cc/api/v1/search?q=cats&page=1
+                    let search_query = match create_seach_query_object(Some(search_text), current_page) {
+                        Ok(value) => value,
+                        Err(_) => String::new()
+                    };
+
+                    println!("Search query: {}", search_query);
+
+                    // Get response back from API with query
+                    // Returns the page of 24 results
+                    let response: Option<WHSearchResponse> = match search_topic(&search_query) {
+                        Ok(response) => {
+                            // println!("Got response: {:?}", response);
+                            Some(response)
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            None
+                        }
+                    };
+
+                    let mut thumbnail_paths: Vec<String> = Vec::new();
+
+                    if let Some(response_data) = response {
+                        for image_data in response_data.data.iter() {
+                            match download::image::thumbnail(&image_data, &temp_thumbnail_folder.to_str().unwrap()) {
+                                Ok(_) => {
+                                    // Download succeeded, use image_data's path or URL instead
+                                    // Construct the correct local thumbnail path
+                                    let local_thumbnail = format!("{}/wallhaven-{}.{}",
+                                                                  temp_thumbnail_folder.to_str().unwrap(),
+                                                                  image_data.id,
+                                                              utils::get_file_extension(&image_data.file_type)
+                                    );
+
+                                    // println!("Local Thumbnail: {}", &local_thumbnail);
+                                    thumbnail_paths.push(local_thumbnail);
+
+
+                                    println!("Downloaded image path: {}", image_data.path);
+
+                                    // self.thumbnails.push(self.temp_thumbs_dir.join(Path::new(&image_data.path).file_name().unwrap()).to_str().unwrap().to_string());
+                                },
+                                Err(e) => println!("Error downloading image: {}", e),
+                            }
+                        }
+                    }
+
+
+                    // add_image_to_grid(&grid_clone, &thumbnail_paths[0], 0, 0);
+                    thumbnail_paths.iter().enumerate().for_each(|(index, path)| {
+                        let row = index / 4; // Assuming 4 images per row
+                        let col = index % 4;
+                        add_image_to_grid(&grid_clone, path, row as i32, col as i32);
+
+                    });
+
+                }
+            });
+
+            // Show the window.
+            window.present();
+        });
+
+
+
+
+        app.run();
+
+
     }
 
     Ok(())
@@ -189,3 +350,35 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
     Ok(())
 }
 
+fn search_topic(search_query: &String) -> Result<WHSearchResponse, Box<dyn Error + Send + Sync>> {
+    let response = ureq::get(search_query.as_str())
+        .header("User-Agent", format!("wallpaper_changer/{}", env!("CARGO_PKG_VERSION")))
+        .call()?
+        .body_mut()
+        .read_json::<models::wallhaven::WHSearchResponse>()?;
+    Ok(response)
+}
+
+fn create_seach_query_object(arg_topic_value: Option<String>, current_page: String) -> Result<String, Result<(), Box<dyn Error + Send + Sync>>> {
+    let search_query: String = match arg_topic_value {
+        Some(topic) => format!(
+            "{}/{}{}&{}={}",
+            WALLHAVEN_SEARCH_API,
+            WALLHAVEN_SEARCH_PARAM,
+            topic,
+            WALLHAVEN_SEARCH_PAGE,
+            current_page
+        ),
+        None => {
+            println!("Error: No topic provided. Please use {} <search term>", utils::flags::TOPIC);
+            return Err(Ok(()));  // Exit the function early
+        }
+    };
+    Ok(search_query)
+}
+
+fn add_image_to_grid(grid: &Grid, image_path: &str, row: i32, col: i32) {
+    let image = Image::from_file(image_path);
+    image.set_size_request(200, 150); // Set thumbnail size
+    grid.attach(&image, col, row, 1, 1);
+}

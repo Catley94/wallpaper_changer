@@ -3,9 +3,10 @@ use std::fs::File;
 use std::io::{copy, Cursor, Read};
 use std::path::Path;
 use crate::models::wallhaven::WHImageData;
+use crate::utils;
 
 pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let file_path = format!("{}/{}.png", local_path, &image.id);
+    let file_path = format!("{}/wallhaven-{}.{}", local_path, &image.id, utils::get_file_extension(&image.file_type));
 
     // Check if file already exists
     if Path::new(&file_path).exists() {
@@ -36,7 +37,7 @@ pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn E
 }
 
 pub fn original(image: &WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
-    let file_path = format!("{}/{}.png", local_path, &image.id);
+    let file_path = format!("{}/wallhaven-{}.{}", local_path, &image.id, utils::get_file_extension(&image.file_type));
 
     // Check if file already exists
     if Path::new(&file_path).exists() {
