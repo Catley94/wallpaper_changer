@@ -243,6 +243,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let prev_button_clone3 = prev_button.clone();
             let next_button_clone = next_button.clone();
             // let search_text_prev = search_text.clone();
+            let scroll_window_clone_search = scroll_window.clone();
 
             search_button.connect_clicked(move |_| {
                 let search_text = search_entry.text().to_string();
@@ -297,6 +298,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let temp_thumbnail_folder_prev = temp_thumbnail_folder.clone();
             let downloaded_images_folder_prev = downloaded_images_folder.clone();
             let current_search_clone = current_search.clone();
+            let scroll_window_clone_prev = scroll_window.clone();
+
             prev_button.connect_clicked(move |_| {
                 let mut page = current_page_clone.borrow_mut();
 
@@ -312,6 +315,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         flow_box_clone.remove(&child);
                     }
                     update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_prev.clone(), downloaded_images_folder_prev.clone());
+                    scroll_window_clone_prev.vadjustment().set_value(0.0);
                 }
             });
 
@@ -324,6 +328,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let prev_button_clone = prev_button.clone();
             let temp_thumbnail_folder_next = temp_thumbnail_folder.clone();
             let downloaded_images_folder_next = downloaded_images_folder.clone();
+            let scroll_window_clone_next = scroll_window.clone();
 
             next_button.connect_clicked(move |button| {
                 let mut page = current_page_clone.borrow_mut();
@@ -341,6 +346,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 }
                 // println!("Current search clone: {}", current_search_clone.borrow())
                 update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_next.clone(), downloaded_images_folder_next.clone());
+                scroll_window_clone_next.vadjustment().set_value(0.0);
 
 
 
