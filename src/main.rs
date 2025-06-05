@@ -2,11 +2,13 @@ use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 use std::path::Path;
+use std::process::Output;
 use gtk4 as gtk;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, Entry, Button, Grid, Image, Label, Builder, CssProvider, StyleContext};
 use gtk4::gdk::Display;
 use crate::models::wallhaven::WHSearchResponse;
+
 
 mod wallpaper;
 mod models;
@@ -20,6 +22,13 @@ const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
 const WALLHAVEN_SEARCH_PARAM: &str = "search?q=";
 const WALLHAVEN_SEARCH_PAGE: &str = "page";
 const APP_ID: &str = "org.example.wallpaper_changer";
+
+#[derive(Clone)]
+enum WallpaperMessage {
+    SetWallpaper(models::wallhaven::WHImageData),
+    DownloadImage(models::wallhaven::WHImageData),
+    // Add other message types as needed
+}
 
 
 #[derive(Default)]
@@ -226,6 +235,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // let grid_clone = grid.clone();
             let flow_box_clone = flow_box.clone();
             let temp_thumbnail_folder_search = temp_thumbnail_folder.clone();
+            let temp_thumbnail_folder_search = temp_thumbnail_folder.clone();
+            let downloaded_images_folder_search = downloaded_images_folder.clone();
             let page_label_clone = page_label.clone();
             let prev_button_clone = prev_button.clone();
             let prev_button_clone2 = prev_button.clone();
@@ -264,7 +275,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
                     // println!("Current page: {}", current_page);
 
-                    update_grid(&flow_box_clone, &search_text, *current_page_clone.borrow(), temp_thumbnail_folder.clone());
+                    update_grid(&flow_box_clone, &search_text, *current_page_clone.borrow(), temp_thumbnail_folder.clone(), downloaded_images_folder_search.clone());
 
                     // let thumbnail_paths = parse_response(&temp_thumbnail_folder);
 
@@ -284,6 +295,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let prev_button_clone = prev_button.clone();
 
             let temp_thumbnail_folder_prev = temp_thumbnail_folder.clone();
+            let downloaded_images_folder_prev = downloaded_images_folder.clone();
             let current_search_clone = current_search.clone();
             prev_button.connect_clicked(move |_| {
                 let mut page = current_page_clone.borrow_mut();
@@ -299,7 +311,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     while let Some(child) = flow_box_clone.first_child() {
                         flow_box_clone.remove(&child);
                     }
-                    update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_prev.clone());
+                    update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_prev.clone(), downloaded_images_folder_prev.clone());
                 }
             });
 
@@ -311,6 +323,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let page_label_clone = page_label.clone();
             let prev_button_clone = prev_button.clone();
             let temp_thumbnail_folder_next = temp_thumbnail_folder.clone();
+            let downloaded_images_folder_next = downloaded_images_folder.clone();
 
             next_button.connect_clicked(move |button| {
                 let mut page = current_page_clone.borrow_mut();
@@ -327,7 +340,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     flow_box_clone.remove(&child);
                 }
                 // println!("Current search clone: {}", current_search_clone.borrow())
-                update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_next.clone());
+                update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_next.clone(), downloaded_images_folder_next.clone());
 
 
 
@@ -555,39 +568,78 @@ fn create_seach_query_object(arg_topic_value: Option<String>, current_page: Stri
 }
 
 // Modify the add_image_to_grid function to work with FlowBox:
-fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str) {
+fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str, image_data: &models::wallhaven::WHImageData, temp_downloaded_images_folder: PathBuf, original_downloaded_images_folder: PathBuf
+) {
     let image = Image::from_file(image_path);
     image.set_size_request(300, 250);
     image.add_css_class("thumbnail-image");
-    flow_box.append(&image);
+
+    // Create a button container for the image
+    let button = Button::new();
+    button.set_child(Some(&image));
+
+    let image_data = image_data.clone();
+    let temp_downloaded_folder = temp_downloaded_images_folder.clone();
+    let original_downloaded_folder = original_downloaded_images_folder.clone();
+
+    button.connect_clicked(move |_| {
+        // Download and set wallpaper directly
+        match download::image::original(&image_data, &original_downloaded_folder.to_str().unwrap()) {
+            Ok(path) => {
+                println!("Downloaded image path: {}", path);
+                match wallpaper::change(path.as_str()) {
+                    Ok(_) => {
+                        println!("Wallpaper changed successfully");
+                    }
+                    Err(_) => {
+                        println!("Error changing wallpaper");
+                    }
+                }
+            }
+            Err(e) => println!("Error downloading image: {}", e)
+        }
+    });
+
+    flow_box.append(&button);
 }
 
-// fn add_image_to_grid(grid: &Grid, image_path: &str, row: i32, col: i32) {
-//     let image = Image::from_file(image_path);
-//     image.set_size_request(150, 100); // Set thumbnail size
-//     image.add_css_class("thumbnail-image");
-
-//     grid.attach(&image, col, row, 1, 1);
-// }
-
-
-fn update_grid(flow_box: &gtk::FlowBox, search_text: &str, page: u16, temp_thumbnail_folder: PathBuf) {
+fn update_grid(flow_box: &gtk::FlowBox, search_text: &str, page: u16, temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) {
     // Your existing logic to fetch and display images for the given page
     // This should use your existing API call code and thumbnail display logic
 
     // Example pseudo-code structure:
     // let search_query = create_search_query_object(Some(search_text.to_string()), page.to_string());
     let response = create_search_object_response(search_text.to_string(), page);
+    
+    if let Some(response_data) = response {
+        println!("Response data: {:?}", &response_data);
+        let thumbnail_paths = parse_response(Some(response_data.clone()), &temp_thumbnail_folder);
 
-    let thumbnail_paths = parse_response(response, &temp_thumbnail_folder);
+        response_data.data.iter().enumerate().for_each(|(index, image_data)| {
+            let local_thumbnail = format!("{}/wallhaven-{}.{}",
+                                          temp_thumbnail_folder.to_str().unwrap(),
+                                          image_data.id,
+                                          utils::get_file_extension(&image_data.file_type)
+            );
 
-    thumbnail_paths.iter().enumerate().for_each(|(index, path)| {
-        // let row = index / 4; // Assuming 4 images per row
-        // let col = index % 4;
-        // add_image_to_grid(&grid, path, row as i32, col as i32);
-        add_image_to_flow_box(&flow_box, path);
+            add_image_to_flow_box(&flow_box, &local_thumbnail, &image_data, temp_thumbnail_folder.clone(), downloaded_images_folder.clone());
 
-    });
+        })
+        
+        // thumbnail_paths.iter().enumerate().for_each(|(index, local_thumbnail_path)| {
+        //     // let row = index / 4; // Assuming 4 images per row
+        //     // let col = index % 4;
+        //     // add_image_to_grid(&grid, path, row as i32, col as i32);
+        //     add_image_to_flow_box(
+        //         &flow_box,
+        //         local_thumbnail_path,
+        //         
+        //     );
+        // 
+        // });
+    };
+
+
 
     // Fetch images and update grid...
     // Make sure to handle the API response and update the grid accordingly

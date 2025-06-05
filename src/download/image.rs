@@ -39,6 +39,8 @@ pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn E
 pub fn original(image: &WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
     let file_path = format!("{}/wallhaven-{}.{}", local_path, &image.id, utils::get_file_extension(&image.file_type));
 
+    println!("Original: Image path: {}", file_path);
+
     // Check if file already exists
     if Path::new(&file_path).exists() {
         println!("File {} already exists, skipping download", file_path);
