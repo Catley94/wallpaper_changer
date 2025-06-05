@@ -19,6 +19,12 @@
     font-weight: bold;
 }
 
+.loading-label {
+    color: #666666;
+    font-style: italic;
+}
+
+
 GtkImage.thumbnail-image {
     /*object-fit: cover;*/
     /*border-radius: 50px;*/

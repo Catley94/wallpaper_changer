@@ -30,8 +30,10 @@ struct AppState {
     current_search: String,
     flow_box: gtk::FlowBox,
     page_label: gtk::Label,
+    search_button: gtk::Button,
     prev_button: gtk::Button,
     next_button: gtk::Button,
+    loading_label: gtk::Label,
     scroll_window: gtk::ScrolledWindow,
     temp_thumbnail_folder: PathBuf,
     downloaded_images_folder: PathBuf,
@@ -54,7 +56,7 @@ pub struct WallpaperWindow {
     pub prev_button: Button,
     pub next_button: Button,
     pub page_label: Label,
-    pub grid: Grid,
+    pub loading_label: Label,
 }
 
 impl WallpaperWindow {
@@ -71,7 +73,9 @@ impl WallpaperWindow {
         let prev_button: Button = builder.object("prev_button").expect("Failed to get prev button");
         let next_button: Button = builder.object("next_button").expect("Failed to get next button");
         let page_label: Label = builder.object("page_label").expect("Failed to get page label");
-        let grid: Grid = builder.object("grid").expect("Failed to get grid");
+        let loading_label: Label = builder.object("loading_label")
+            .expect("Failed to get loading label");
+
 
         // Load CSS
         let provider = CssProvider::new();
@@ -89,7 +93,6 @@ impl WallpaperWindow {
         prev_button.add_css_class("prev_button");
         next_button.add_css_class("next_button");
         page_label.add_css_class("page_label");
-        grid.add_css_class("image-grid");
 
         Self {
             window,
@@ -98,7 +101,7 @@ impl WallpaperWindow {
             prev_button,
             next_button,
             page_label,
-            grid,
+            loading_label
         }
     }
 }
@@ -179,12 +182,15 @@ fn gui_mode() {
             .sensitive(false)  // Disabled initially
             .build();
 
+        let loading_label: Label = gtk::Label::new(Some("Downloading images..."));
+
 
         let page_label = gtk::Label::new(Some("Page: 1"));
 
         nav_box.append(&prev_button);
         nav_box.append(&page_label);
         nav_box.append(&next_button);
+        nav_box.append(&loading_label);
 
         search_box.append(&search_entry);
         search_box.append(&search_button);
@@ -226,8 +232,10 @@ fn gui_mode() {
             current_search: String::new(),
             flow_box: flow_box.clone(),
             page_label: page_label.clone(),
+            search_button: search_button.clone(),
             prev_button: prev_button.clone(),
             next_button: next_button.clone(),
+            loading_label: loading_label.clone(),
             scroll_window: scroll_window.clone(),
             temp_thumbnail_folder: temp_thumbnail_folder.clone(),
             downloaded_images_folder: downloaded_images_folder.clone(),
@@ -236,16 +244,9 @@ fn gui_mode() {
 
 
         // Search button handler / Handle search button clicks
-        // let current_page_clone_search = current_page.clone();
-        // let current_search_clone_search = current_search.clone();
-        // let flow_box_clone_search = flow_box.clone();
-        // let temp_thumbnail_folder_clone_search = temp_thumbnail_folder.clone();
-        // let downloaded_images_folder_clone_search = downloaded_images_folder.clone();
-        // let page_label_clone_search = page_label.clone();
-        // let prev_button_clone_search = prev_button.clone();
-        // let next_button_clone_search = next_button.clone();
         let state_search = state.clone();
 
+        set_loading_state(&state.borrow(), false);
         search_button.connect_clicked(move |_| {
             let search_text = search_entry.text().to_string();
             let mut state = state_search.borrow_mut();
@@ -257,6 +258,9 @@ fn gui_mode() {
                 // let mut state = state_search.borrow_mut();
                 state.current_page = 1;
                 state.current_search = search_text.clone();
+
+                // Show loading state
+                set_loading_state(&state, true);
 
                 // Update page number
                 state.page_label.set_text(&format!("Page: {}", state.current_page));
@@ -278,18 +282,13 @@ fn gui_mode() {
                     state.temp_thumbnail_folder.clone(),
                     state.downloaded_images_folder.clone()
                 );
+
+                // Hide loading label
+                set_loading_state(&state, false);
             }
         });
 
         // Previous button handler
-        // let current_page_clone_pb = current_page.clone();
-        // let flow_box_clone_pb = flow_box.clone();
-        // let page_label_clone_pb = page_label.clone();
-        // let prev_button_clone_pb = prev_button.clone();
-        // let temp_thumbnail_folder_clone_pb = temp_thumbnail_folder.clone();
-        // let downloaded_images_folder_clone_pb = downloaded_images_folder.clone();
-        // let current_search_clone_pb = current_search.clone();
-        // let scroll_window_clone_pb = scroll_window.clone();
         let state_prev = state.clone();
 
         prev_button.connect_clicked(move |_| {
@@ -299,6 +298,8 @@ fn gui_mode() {
             // Minus the page number by 1 if greater than 1
             if state.current_page > 1 {
                 state.current_page -= 1;
+                // Show loading label
+                set_loading_state(&state, true);
 
                 // Update page number and set the button to be enabled if the page number is greater than 1
                 state.page_label.set_text(&format!("Page: {}", state.current_page));
@@ -320,26 +321,24 @@ fn gui_mode() {
 
                 // Reset the scroll bar back to the top
                 state.scroll_window.vadjustment().set_value(0.0);
+
+                // Hide loading label
+                set_loading_state(&state, false);
             }
         });
 
         // Next button handler
-        // let current_page_clone_nb = current_page.clone();
-        // let current_search_clone_nb = current_search.clone();
-        // let flow_box_clone_nb = flow_box.clone();
-        // let page_label_clone_nb = page_label.clone();
-        // let prev_button_clone_nb = prev_button.clone();
-        // let temp_thumbnail_folder_nb = temp_thumbnail_folder.clone();
-        // let downloaded_images_folder_nb = downloaded_images_folder.clone();
-        // let scroll_window_clone_nb = scroll_window.clone();
         let state_next = state.clone();
 
         next_button.connect_clicked(move |button| {
             let mut state = state_next.borrow_mut();
+            set_loading_state(&state, true);
 
             download::clear_temp_thumbnails(state.temp_thumbnail_folder.to_str().unwrap());
 
             state.current_page += 1;
+
+            // Show loading label
 
             // Get response data to check last page
             let search_text = state.current_search.to_string();
@@ -373,6 +372,10 @@ fn gui_mode() {
 
             // Reset the scroll bar back to the top
             state.scroll_window.vadjustment().set_value(0.0);
+
+            // Hide loading label
+            // TODO: The GUI halts when loading images, so this is never seen
+            set_loading_state(&state, false);
         });
 
         // Show the window.
@@ -666,4 +669,11 @@ fn parse_response(response: &Option<models::wallhaven::WHSearchResponse>, temp_t
         }
     }
     thumbnail_paths
+}
+
+fn set_loading_state(state: &AppState, is_loading: bool) {
+    state.loading_label.set_visible(is_loading);
+    state.search_button.set_sensitive(!is_loading);
+    state.prev_button.set_sensitive(!is_loading && state.current_page > 1);
+    state.next_button.set_sensitive(!is_loading);
 }
