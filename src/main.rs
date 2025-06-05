@@ -187,13 +187,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .vexpand(true)
                 .build();
 
-            let grid = Grid::builder()
+            // Instead of creating a Grid, create a FlowBox
+            let flow_box = gtk::FlowBox::builder()
+                .valign(gtk::Align::Start)
+                .max_children_per_line(4)  // Set how many items per row
+                .min_children_per_line(2)  // Minimum items per row
+                .selection_mode(gtk::SelectionMode::None)
+                .homogeneous(true)         // Make all children the same size
                 .row_spacing(10)
                 .column_spacing(10)
                 .margin_top(10)
                 .build();
 
-            scroll_window.set_child(Some(&grid));
+            // Add the FlowBox to the ScrolledWindow instead of Grid
+            scroll_window.set_child(Some(&flow_box));
+
+            // let grid = Grid::builder()
+            //     .row_spacing(10)
+            //     .column_spacing(10)
+            //     .margin_top(10)
+            //     .build();
+
+            // scroll_window.set_child(Some(&grid));
 
             // Add everything to the main box
             main_box.append(&search_box);
@@ -208,7 +223,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // Search button handler / Handle search button clicks
             let current_page_clone = current_page.clone();
             let current_search_clone = current_search.clone();
-            let grid_clone = grid.clone();
+            // let grid_clone = grid.clone();
+            let flow_box_clone = flow_box.clone();
             let temp_thumbnail_folder_search = temp_thumbnail_folder.clone();
             let page_label_clone = page_label.clone();
             let prev_button_clone = prev_button.clone();
@@ -234,8 +250,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
 
                     // Clear existing thumbnails
-                    while let Some(child) = grid_clone.first_child() {
-                        grid_clone.remove(&child);
+                    while let Some(child) = flow_box_clone.first_child() {
+                        flow_box_clone.remove(&child);
                     }
                     // TODO: Implement search functionality using your existing API code
                     // You can reuse your existing wallhaven API code here
@@ -248,7 +264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
                     // println!("Current page: {}", current_page);
 
-                    update_grid(&grid_clone, &search_text, *current_page_clone.borrow(), temp_thumbnail_folder.clone());
+                    update_grid(&flow_box_clone, &search_text, *current_page_clone.borrow(), temp_thumbnail_folder.clone());
 
                     // let thumbnail_paths = parse_response(&temp_thumbnail_folder);
 
@@ -262,7 +278,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // Previous button handler
             let current_page_clone = current_page.clone();
             let current_search_clone = current_search.clone();
-            let grid_clone = grid.clone();
+            // let grid_clone = grid.clone();
+            let flow_box_clone = flow_box.clone();
             let page_label_clone = page_label.clone();
             let prev_button_clone = prev_button.clone();
 
@@ -279,17 +296,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     prev_button_clone2.set_sensitive(*page > 1);
 
                     // Clear existing thumbnails
-                    while let Some(child) = grid_clone.first_child() {
-                        grid_clone.remove(&child);
+                    while let Some(child) = flow_box_clone.first_child() {
+                        flow_box_clone.remove(&child);
                     }
-                    update_grid(&grid_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_prev.clone());
+                    update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_prev.clone());
                 }
             });
 
             // Next button handler
             let current_page_clone = current_page.clone();
             let current_search_clone = current_search.clone();
-            let grid_clone = grid.clone();
+            // let grid_clone = grid.clone();
+            let flow_box_clone = flow_box.clone();
             let page_label_clone = page_label.clone();
             let prev_button_clone = prev_button.clone();
             let temp_thumbnail_folder_next = temp_thumbnail_folder.clone();
@@ -305,11 +323,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 prev_button_clone3.set_sensitive(*page > 1);
 
                 // Clear existing thumbnails
-                while let Some(child) = grid_clone.first_child() {
-                    grid_clone.remove(&child);
+                while let Some(child) = flow_box_clone.first_child() {
+                    flow_box_clone.remove(&child);
                 }
                 // println!("Current search clone: {}", current_search_clone.borrow())
-                update_grid(&grid_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_next.clone());
+                update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_next.clone());
 
 
 
@@ -536,16 +554,24 @@ fn create_seach_query_object(arg_topic_value: Option<String>, current_page: Stri
     Ok(search_query)
 }
 
-fn add_image_to_grid(grid: &Grid, image_path: &str, row: i32, col: i32) {
+// Modify the add_image_to_grid function to work with FlowBox:
+fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str) {
     let image = Image::from_file(image_path);
-    image.set_size_request(150, 100); // Set thumbnail size
+    image.set_size_request(300, 250);
     image.add_css_class("thumbnail-image");
-
-    grid.attach(&image, col, row, 1, 1);
+    flow_box.append(&image);
 }
 
+// fn add_image_to_grid(grid: &Grid, image_path: &str, row: i32, col: i32) {
+//     let image = Image::from_file(image_path);
+//     image.set_size_request(150, 100); // Set thumbnail size
+//     image.add_css_class("thumbnail-image");
 
-fn update_grid(grid: &Grid, search_text: &str, page: u16, temp_thumbnail_folder: PathBuf) {
+//     grid.attach(&image, col, row, 1, 1);
+// }
+
+
+fn update_grid(flow_box: &gtk::FlowBox, search_text: &str, page: u16, temp_thumbnail_folder: PathBuf) {
     // Your existing logic to fetch and display images for the given page
     // This should use your existing API call code and thumbnail display logic
 
@@ -556,9 +582,10 @@ fn update_grid(grid: &Grid, search_text: &str, page: u16, temp_thumbnail_folder:
     let thumbnail_paths = parse_response(response, &temp_thumbnail_folder);
 
     thumbnail_paths.iter().enumerate().for_each(|(index, path)| {
-        let row = index / 4; // Assuming 4 images per row
-        let col = index % 4;
-        add_image_to_grid(&grid, path, row as i32, col as i32);
+        // let row = index / 4; // Assuming 4 images per row
+        // let col = index % 4;
+        // add_image_to_grid(&grid, path, row as i32, col as i32);
+        add_image_to_flow_box(&flow_box, path);
 
     });
 

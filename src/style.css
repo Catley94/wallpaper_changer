@@ -21,14 +21,14 @@
 
 GtkImage.thumbnail-image {
     /*object-fit: cover;*/
-    border-radius: 50px;
-    background-clip: padding-box;
+    /*border-radius: 50px;*/
+    /*background-clip: padding-box;*/
     transition: all 200ms ease;
 }
 
 
 .thumbnail-image:hover {
-    transform: scale(1.3);
+    transform: scale(1.05);
 }
 
 /* Target the grid by its ID */
