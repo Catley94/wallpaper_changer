@@ -218,6 +218,10 @@ fn gui_mode() {
             let search_text = search_entry.text().to_string();
             let temp_thumbnail_folder = &temp_thumbnail_folder_clone_search;
 
+            // if download::clear_temp_thumbnails(temp_thumbnail_folder.to_str().unwrap()).is_ok() {
+            //     println!("Cleared temp thumbnails");
+            // }
+
             if !search_text.is_empty() {
                 *current_page_clone_search.borrow_mut() = 1;
                 *current_search_clone_search.borrow_mut() = search_text.clone();
@@ -284,6 +288,11 @@ fn gui_mode() {
         let scroll_window_clone_nb = scroll_window.clone();
 
         next_button.connect_clicked(move |button| {
+
+            // if download::clear_temp_thumbnails(temp_thumbnail_folder_nb.to_str().unwrap()).is_ok() {
+            //     println!("Cleared temp thumbnails");
+            // }
+
             let mut page = current_page_clone_nb.borrow_mut();
             *page += 1;
 
