@@ -218,9 +218,7 @@ fn gui_mode() {
             let search_text = search_entry.text().to_string();
             let temp_thumbnail_folder = &temp_thumbnail_folder_clone_search;
 
-            // if download::clear_temp_thumbnails(temp_thumbnail_folder.to_str().unwrap()).is_ok() {
-            //     println!("Cleared temp thumbnails");
-            // }
+            download::clear_temp_thumbnails(temp_thumbnail_folder.to_str().unwrap());
 
             if !search_text.is_empty() {
                 *current_page_clone_search.borrow_mut() = 1;
@@ -289,9 +287,7 @@ fn gui_mode() {
 
         next_button.connect_clicked(move |button| {
 
-            // if download::clear_temp_thumbnails(temp_thumbnail_folder_nb.to_str().unwrap()).is_ok() {
-            //     println!("Cleared temp thumbnails");
-            // }
+            download::clear_temp_thumbnails(temp_thumbnail_folder_nb.to_str().unwrap());
 
             let mut page = current_page_clone_nb.borrow_mut();
             *page += 1;
@@ -570,7 +566,9 @@ fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str, image_data: 
 fn update_grid(flow_box: &gtk::FlowBox, search_text: &str, page: u16, temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) {
     // Get the response with the topic (search_text) and page number (page)
     let response = create_search_object_response(search_text.to_string(), page);
-    
+
+    let thumbnail_paths: Vec<String> = parse_response(&response, &temp_thumbnail_folder);
+
     if let Some(response_data) = response {
         response_data.data.iter().enumerate().for_each(|(index, image_data)| {
             let local_thumbnail = format!("{}/wallhaven-{}.{}",
@@ -586,7 +584,7 @@ fn update_grid(flow_box: &gtk::FlowBox, search_text: &str, page: u16, temp_thumb
     };
 }
 
-fn parse_response(response: Option<models::wallhaven::WHSearchResponse>, temp_thumbnail_folder: &PathBuf) -> Vec<String> {
+fn parse_response(response: &Option<models::wallhaven::WHSearchResponse>, temp_thumbnail_folder: &PathBuf) -> Vec<String> {
     let mut thumbnail_paths: Vec<String> = Vec::new();
 
     if let Some(response_data) = response {

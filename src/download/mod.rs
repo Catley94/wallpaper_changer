@@ -5,8 +5,8 @@ use std::path::Path;
 pub mod image;
 
 pub fn clear_temp_thumbnails(temp_folder: &str) -> std::io::Result<()> {
-    const MAX_FILES: usize = 100;
-    const MAX_SIZE_BYTES: u64 = 100 * 1024 * 1024; // 100MB in bytes
+    const MAX_FILES: usize = 1000;
+    const MAX_SIZE_BYTES: u64 = 500 * 1024 * 1024; // 500MB in bytes
 
     let path = Path::new(temp_folder);
 
