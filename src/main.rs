@@ -294,9 +294,12 @@ fn gui_mode() {
 
             // Update page number
             page_label_clone_nb.set_text(&format!("Page: {}", *page));
-            // TODO; Get access to the final page in search response
-            // Enable the next button indefinitely
-            button.set_sensitive(true);
+
+            // Set button sensitivity based on current page and last page from response
+            if let Some(response_data) = &response {
+                button.set_sensitive(*page < response_data.meta.last_page as u16);
+            }
+
             // Enable the previous button if the page number is greater than 1
             prev_button_clone_nb.set_sensitive(*page > 1);
 
@@ -315,7 +318,6 @@ fn gui_mode() {
         // Show the window.
         wallpaper_window.window.present();
     });
-
 
     app.run();
 }
@@ -474,7 +476,7 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
             .read_json::<models::wallhaven::WHSearchResponse>()?;
 
 
-        println!("Images per page: {:?}", response.meta.last_page);
+        // println!("Images per page: {:?}", response.meta.last_page);
 
         // Collect thumbnail paths
         let mut thumbnail_paths: Vec<String> = Vec::new();
@@ -489,10 +491,7 @@ fn cli_mode(temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) -
                 Err(e) => println!("Error downloading image: {}", e),
             }
         }
-
-
         file_manager::linux::gnome::open(&temp_thumbnail_folder);
-
     }
     Ok(())
 }
@@ -525,7 +524,7 @@ fn create_seach_query_object(arg_topic_value: Option<String>, current_page: Stri
 }
 
 // Modify the add_image_to_grid function to work with FlowBox:
-fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str, image_data: &models::wallhaven::WHImageData, temp_downloaded_images_folder: PathBuf, original_downloaded_images_folder: PathBuf
+fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str, image_data: &models::wallhaven::WHImageData, original_downloaded_images_folder: PathBuf
 ) {
     let image = Image::from_file(image_path);
     image.set_size_request(300, 250);
@@ -536,7 +535,6 @@ fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str, image_data: 
     button.set_child(Some(&image));
 
     let image_data = image_data.clone();
-    let temp_downloaded_folder = temp_downloaded_images_folder.clone();
     let original_downloaded_folder = original_downloaded_images_folder.clone();
 
     button.connect_clicked(move |_| {
@@ -561,17 +559,10 @@ fn add_image_to_flow_box(flow_box: &gtk::FlowBox, image_path: &str, image_data: 
 }
 
 fn update_grid(flow_box: &gtk::FlowBox, search_text: &str, page: u16, temp_thumbnail_folder: PathBuf, downloaded_images_folder: PathBuf) {
-    // Your existing logic to fetch and display images for the given page
-    // This should use your existing API call code and thumbnail display logic
-
-    // Example pseudo-code structure:
-    // let search_query = create_search_query_object(Some(search_text.to_string()), page.to_string());
+    // Get the response with the topic (search_text) and page number (page)
     let response = create_search_object_response(search_text.to_string(), page);
     
     if let Some(response_data) = response {
-        println!("Response data: {:?}", &response_data);
-        let thumbnail_paths = parse_response(Some(response_data.clone()), &temp_thumbnail_folder);
-
         response_data.data.iter().enumerate().for_each(|(index, image_data)| {
             let local_thumbnail = format!("{}/wallhaven-{}.{}",
                                           temp_thumbnail_folder.to_str().unwrap(),
@@ -579,27 +570,11 @@ fn update_grid(flow_box: &gtk::FlowBox, search_text: &str, page: u16, temp_thumb
                                           utils::get_file_extension(&image_data.file_type)
             );
 
-            add_image_to_flow_box(&flow_box, &local_thumbnail, &image_data, temp_thumbnail_folder.clone(), downloaded_images_folder.clone());
+            add_image_to_flow_box(&flow_box, &local_thumbnail, &image_data, downloaded_images_folder.clone());
 
         })
-        
-        // thumbnail_paths.iter().enumerate().for_each(|(index, local_thumbnail_path)| {
-        //     // let row = index / 4; // Assuming 4 images per row
-        //     // let col = index % 4;
-        //     // add_image_to_grid(&grid, path, row as i32, col as i32);
-        //     add_image_to_flow_box(
-        //         &flow_box,
-        //         local_thumbnail_path,
-        //         
-        //     );
-        // 
-        // });
+
     };
-
-
-
-    // Fetch images and update grid...
-    // Make sure to handle the API response and update the grid accordingly
 }
 
 fn parse_response(response: Option<models::wallhaven::WHSearchResponse>, temp_thumbnail_folder: &PathBuf) -> Vec<String> {
@@ -623,7 +598,6 @@ fn parse_response(response: Option<models::wallhaven::WHSearchResponse>, temp_th
 
                     println!("Downloaded image path: {}", image_data.path);
 
-                    // self.thumbnails.push(self.temp_thumbs_dir.join(Path::new(&image_data.path).file_name().unwrap()).to_str().unwrap().to_string());
                 },
                 Err(e) => println!("Error downloading image: {}", e),
             }
