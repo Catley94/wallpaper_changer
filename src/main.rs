@@ -2,7 +2,6 @@ use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 use std::path::Path;
-use std::process::Output;
 use gtk4 as gtk;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, Entry, Button, Grid, Image, Label, Builder, CssProvider, StyleContext};
@@ -62,34 +61,12 @@ impl WallpaperWindow {
         let provider = CssProvider::new();
         provider.load_from_data(include_str!("style.css"));
 
-        // Add CSS provider to default screen
-        // gtk::style_context_add_provider_for_display(
-        //     &window.display(),
-        //     &provider,
-        //     gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        // );
-
         // Add the provider to the default screen
         gtk::style_context_add_provider_for_display(
             &Display::default().expect("Could not connect to a display."),
             &provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
-
-        // if let Some(display) = gtk4::gdk::Display::default() {
-        //     StyleContext::add_provider_for_display(
-        //         &display,
-        //         &provider,
-        //         gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        //     );
-        // }
-
-
-        // StyleContext::add_provider_for_display(
-        //     &window.display(),
-        //     &provider,
-        //     gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        // );
 
         // Add CSS classes to widgets
         search_button.add_css_class("search_button");
@@ -122,252 +99,226 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if is_cli {
         cli_mode(temp_thumbnail_folder, downloaded_images_folder)?;
     } else {
-        let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
-        let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
-        // GUI - gtk4
-
-        // Create a new application
-        let app = Application::builder()
-            .application_id("com.example.search")
-            .build();
-
-        app.connect_activate(move |app| {
-            // We create the main window.
-            // Create the main window
-            let wallpaper_window = WallpaperWindow::new(app);
-
-            // Create a vertical box for layout
-            let main_box = gtk::Box::builder()
-                .orientation(gtk::Orientation::Vertical)
-                .spacing(10)
-                .margin_top(10)
-                .margin_bottom(10)
-                .margin_start(10)
-                .margin_end(10)
-                .build();
-
-            // Create search controls
-            let search_box = gtk::Box::builder()
-                .orientation(gtk::Orientation::Horizontal)
-                .spacing(5)
-                .build();
-
-            let search_entry = Entry::builder()
-                .placeholder_text("Enter search topic...")
-                .hexpand(true)
-                .build();
-
-            let search_button = Button::builder()
-                .label("Search")
-                .build();
-
-            // Navigation controls box
-            let nav_box = gtk::Box::builder()
-                .orientation(gtk::Orientation::Horizontal)
-                .spacing(5)
-                .halign(gtk::Align::Center)
-                .margin_top(10)
-                .build();
-
-            let prev_button = Button::builder()
-                .label("Previous")
-                .sensitive(false)  // Disabled initially
-                .build();
-
-            let next_button = Button::builder()
-                .label("Next")
-                .sensitive(false)  // Disabled initially
-                .build();
-
-
-            let page_label = gtk::Label::new(Some("Page: 1"));
-
-            nav_box.append(&prev_button);
-            nav_box.append(&page_label);
-            nav_box.append(&next_button);
-
-
-            search_box.append(&search_entry);
-            search_box.append(&search_button);
-
-            // Create scrollable grid for thumbnails
-            let scroll_window = gtk::ScrolledWindow::builder()
-                .hexpand(true)
-                .vexpand(true)
-                .build();
-
-            // Instead of creating a Grid, create a FlowBox
-            let flow_box = gtk::FlowBox::builder()
-                .valign(gtk::Align::Start)
-                .max_children_per_line(4)  // Set how many items per row
-                .min_children_per_line(2)  // Minimum items per row
-                .selection_mode(gtk::SelectionMode::None)
-                .homogeneous(true)         // Make all children the same size
-                .row_spacing(10)
-                .column_spacing(10)
-                .margin_top(10)
-                .build();
-
-            // Add the FlowBox to the ScrolledWindow instead of Grid
-            scroll_window.set_child(Some(&flow_box));
-
-            // let grid = Grid::builder()
-            //     .row_spacing(10)
-            //     .column_spacing(10)
-            //     .margin_top(10)
-            //     .build();
-
-            // scroll_window.set_child(Some(&grid));
-
-            // Add everything to the main box
-            main_box.append(&search_box);
-            main_box.append(&nav_box);
-            main_box.append(&scroll_window);
-            wallpaper_window.window.set_child(Some(&main_box));
-
-            // Set up state
-            let current_page = std::rc::Rc::new(std::cell::RefCell::new(1));
-            let current_search = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
-
-            // Search button handler / Handle search button clicks
-            let current_page_clone = current_page.clone();
-            let current_search_clone = current_search.clone();
-            // let grid_clone = grid.clone();
-            let flow_box_clone = flow_box.clone();
-            let temp_thumbnail_folder_search = temp_thumbnail_folder.clone();
-            let temp_thumbnail_folder_search = temp_thumbnail_folder.clone();
-            let downloaded_images_folder_search = downloaded_images_folder.clone();
-            let page_label_clone = page_label.clone();
-            let prev_button_clone = prev_button.clone();
-            let prev_button_clone2 = prev_button.clone();
-            let prev_button_clone3 = prev_button.clone();
-            let next_button_clone = next_button.clone();
-            // let search_text_prev = search_text.clone();
-            let scroll_window_clone_search = scroll_window.clone();
-
-            search_button.connect_clicked(move |_| {
-                let search_text = search_entry.text().to_string();
-                let temp_thumbnail_folder = &temp_thumbnail_folder_search;
-                let current_page_inner: u16 = current_page_clone.borrow().clone();
-                if !search_text.is_empty() {
-                    println!("Search button clicked: {}", search_text);
-
-                    *current_page_clone.borrow_mut() = 1;
-                    *current_search_clone.borrow_mut() = search_text.clone();
-
-                    // Update UI
-                    page_label_clone.set_text(&format!("Page: {}", current_page_clone.borrow()));
-                    prev_button_clone.set_sensitive(false);
-                    next_button_clone.set_sensitive(true);
-
-
-                    // Clear existing thumbnails
-                    while let Some(child) = flow_box_clone.first_child() {
-                        flow_box_clone.remove(&child);
-                    }
-                    // TODO: Implement search functionality using your existing API code
-                    // You can reuse your existing wallhaven API code here
-
-
-
-
-                    println!("Search input: {}", search_text);
-
-
-                    // println!("Current page: {}", current_page);
-
-                    update_grid(&flow_box_clone, &search_text, *current_page_clone.borrow(), temp_thumbnail_folder.clone(), downloaded_images_folder_search.clone());
-
-                    // let thumbnail_paths = parse_response(&temp_thumbnail_folder);
-
-
-                    // add_image_to_grid(&grid_clone, &thumbnail_paths[0], 0, 0);
-
-
-                }
-            });
-
-            // Previous button handler
-            let current_page_clone = current_page.clone();
-            let current_search_clone = current_search.clone();
-            // let grid_clone = grid.clone();
-            let flow_box_clone = flow_box.clone();
-            let page_label_clone = page_label.clone();
-            let prev_button_clone = prev_button.clone();
-
-            let temp_thumbnail_folder_prev = temp_thumbnail_folder.clone();
-            let downloaded_images_folder_prev = downloaded_images_folder.clone();
-            let current_search_clone = current_search.clone();
-            let scroll_window_clone_prev = scroll_window.clone();
-
-            prev_button.connect_clicked(move |_| {
-                let mut page = current_page_clone.borrow_mut();
-
-                if *page > 1 {
-                    *page -= 1;
-
-                    // Update UI
-                    page_label_clone.set_text(&format!("Page: {}", *page));
-                    prev_button_clone2.set_sensitive(*page > 1);
-
-                    // Clear existing thumbnails
-                    while let Some(child) = flow_box_clone.first_child() {
-                        flow_box_clone.remove(&child);
-                    }
-                    update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_prev.clone(), downloaded_images_folder_prev.clone());
-                    scroll_window_clone_prev.vadjustment().set_value(0.0);
-                }
-            });
-
-            // Next button handler
-            let current_page_clone = current_page.clone();
-            let current_search_clone = current_search.clone();
-            // let grid_clone = grid.clone();
-            let flow_box_clone = flow_box.clone();
-            let page_label_clone = page_label.clone();
-            let prev_button_clone = prev_button.clone();
-            let temp_thumbnail_folder_next = temp_thumbnail_folder.clone();
-            let downloaded_images_folder_next = downloaded_images_folder.clone();
-            let scroll_window_clone_next = scroll_window.clone();
-
-            next_button.connect_clicked(move |button| {
-                let mut page = current_page_clone.borrow_mut();
-                *page += 1;
-
-                // Update UI
-                page_label_clone.set_text(&format!("Page: {}", *page));
-                // TODO; Get access to the final page in search response
-                button.set_sensitive(true);
-                prev_button_clone3.set_sensitive(*page > 1);
-
-                // Clear existing thumbnails
-                while let Some(child) = flow_box_clone.first_child() {
-                    flow_box_clone.remove(&child);
-                }
-                // println!("Current search clone: {}", current_search_clone.borrow())
-                update_grid(&flow_box_clone, &current_search_clone.borrow(), *page, temp_thumbnail_folder_next.clone(), downloaded_images_folder_next.clone());
-                scroll_window_clone_next.vadjustment().set_value(0.0);
-
-
-
-            });
-
-            // Show the window.
-            wallpaper_window.window.present();
-        });
-
-
-
-
-        app.run();
-
-
+        gui_mode();
     }
 
     Ok(())
 }
 
+fn gui_mode() {
+    let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
+    let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
+    // GUI - gtk4
 
+    // Create a new application
+    let app = Application::builder()
+        .application_id("com.example.search")
+        .build();
+
+    app.connect_activate(move |app| {
+        // We create the main window.
+        // Create the main window
+        let wallpaper_window = WallpaperWindow::new(app);
+
+        // Create a vertical box for layout
+        let main_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(10)
+            .margin_top(10)
+            .margin_bottom(10)
+            .margin_start(10)
+            .margin_end(10)
+            .build();
+
+        // Create search controls
+        let search_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(5)
+            .build();
+
+        let search_entry = Entry::builder()
+            .placeholder_text("Enter search topic...")
+            .hexpand(true)
+            .build();
+
+        let search_button = Button::builder()
+            .label("Search")
+            .build();
+
+        // Navigation controls box
+        let nav_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(5)
+            .halign(gtk::Align::Center)
+            .margin_top(10)
+            .build();
+
+        let prev_button = Button::builder()
+            .label("Previous")
+            .sensitive(false)  // Disabled initially
+            .build();
+
+        let next_button = Button::builder()
+            .label("Next")
+            .sensitive(false)  // Disabled initially
+            .build();
+
+
+        let page_label = gtk::Label::new(Some("Page: 1"));
+
+        nav_box.append(&prev_button);
+        nav_box.append(&page_label);
+        nav_box.append(&next_button);
+
+        search_box.append(&search_entry);
+        search_box.append(&search_button);
+
+        // Create scrollable grid for thumbnails
+        let scroll_window = gtk::ScrolledWindow::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .build();
+
+        // Instead of creating a Grid, create a FlowBox
+        let flow_box = gtk::FlowBox::builder()
+            .valign(gtk::Align::Start)
+            .max_children_per_line(4)  // Set how many items per row
+            .min_children_per_line(2)  // Minimum items per row
+            .selection_mode(gtk::SelectionMode::None)
+            .homogeneous(true)         // Make all children the same size
+            .row_spacing(10)
+            .column_spacing(10)
+            .margin_top(10)
+            .build();
+
+        // Add the FlowBox to the ScrolledWindow instead of Grid
+        scroll_window.set_child(Some(&flow_box));
+
+        // Add everything to the main box
+        main_box.append(&search_box);
+        main_box.append(&nav_box);
+        main_box.append(&scroll_window);
+        wallpaper_window.window.set_child(Some(&main_box));
+
+        // Set up state
+        let current_page = std::rc::Rc::new(std::cell::RefCell::new(1));
+        let current_search = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+
+        // Search button handler / Handle search button clicks
+        let current_page_clone_search = current_page.clone();
+        let current_search_clone_search = current_search.clone();
+        let flow_box_clone_search = flow_box.clone();
+        let temp_thumbnail_folder_clone_search = temp_thumbnail_folder.clone();
+        let downloaded_images_folder_clone_search = downloaded_images_folder.clone();
+        let page_label_clone_search = page_label.clone();
+        let prev_button_clone_search = prev_button.clone();
+        let next_button_clone_search = next_button.clone();
+
+        search_button.connect_clicked(move |_| {
+            let search_text = search_entry.text().to_string();
+            let temp_thumbnail_folder = &temp_thumbnail_folder_clone_search;
+
+            if !search_text.is_empty() {
+                *current_page_clone_search.borrow_mut() = 1;
+                *current_search_clone_search.borrow_mut() = search_text.clone();
+
+                // Update page number
+                page_label_clone_search.set_text(&format!("Page: {}", current_page_clone_search.borrow()));
+                // Disable previous button
+                prev_button_clone_search.set_sensitive(false);
+                // Enable next button
+                next_button_clone_search.set_sensitive(true);
+
+                // Clear existing thumbnails
+                while let Some(child) = flow_box_clone_search.first_child() {
+                    flow_box_clone_search.remove(&child);
+                }
+
+                // Update the grid with new the new images on the updated page number
+                update_grid(&flow_box_clone_search, &search_text, *current_page_clone_search.borrow(), temp_thumbnail_folder.clone(), downloaded_images_folder_clone_search.clone());
+            }
+        });
+
+        // Previous button handler
+        let current_page_clone_pb = current_page.clone();
+        let flow_box_clone_pb = flow_box.clone();
+        let page_label_clone_pb = page_label.clone();
+        let prev_button_clone_pb = prev_button.clone();
+        let temp_thumbnail_folder_clone_pb = temp_thumbnail_folder.clone();
+        let downloaded_images_folder_clone_pb = downloaded_images_folder.clone();
+        let current_search_clone_pb = current_search.clone();
+        let scroll_window_clone_pb = scroll_window.clone();
+
+        prev_button.connect_clicked(move |_| {
+            let mut page = current_page_clone_pb.borrow_mut();
+
+            // Minus the page number by 1 if greater than 1
+            if *page > 1 {
+                *page -= 1;
+
+                // Update page number and set the button to be enabled if the page number is greater than 1
+                page_label_clone_pb.set_text(&format!("Page: {}", *page));
+                prev_button_clone_pb.set_sensitive(*page > 1);
+
+                // Clear existing thumbnails
+                while let Some(child) = flow_box_clone_pb.first_child() {
+                    flow_box_clone_pb.remove(&child);
+                }
+
+                // Update the grid with new the new images on the updated page number
+                update_grid(&flow_box_clone_pb, &current_search_clone_pb.borrow(), *page, temp_thumbnail_folder_clone_pb.clone(), downloaded_images_folder_clone_pb.clone());
+
+                // Reset the scroll bar back to the top
+                scroll_window_clone_pb.vadjustment().set_value(0.0);
+            }
+        });
+
+        // Next button handler
+        let current_page_clone_nb = current_page.clone();
+        let current_search_clone_nb = current_search.clone();
+        let flow_box_clone_nb = flow_box.clone();
+        let page_label_clone_nb = page_label.clone();
+        let prev_button_clone_nb = prev_button.clone();
+        let temp_thumbnail_folder_nb = temp_thumbnail_folder.clone();
+        let downloaded_images_folder_nb = downloaded_images_folder.clone();
+        let scroll_window_clone_nb = scroll_window.clone();
+
+        next_button.connect_clicked(move |button| {
+            let mut page = current_page_clone_nb.borrow_mut();
+            *page += 1;
+
+            // Get response data to check last page
+            let search_text = current_search_clone_nb.borrow().to_string();
+            let response = create_search_object_response(search_text.clone(), *page);
+
+
+            // Update page number
+            page_label_clone_nb.set_text(&format!("Page: {}", *page));
+            // TODO; Get access to the final page in search response
+            // Enable the next button indefinitely
+            button.set_sensitive(true);
+            // Enable the previous button if the page number is greater than 1
+            prev_button_clone_nb.set_sensitive(*page > 1);
+
+            // Clear existing thumbnails
+            while let Some(child) = flow_box_clone_nb.first_child() {
+                flow_box_clone_nb.remove(&child);
+            }
+
+            // Update the grid with new the new images on the updated page number
+            update_grid(&flow_box_clone_nb, &current_search_clone_nb.borrow(), *page, temp_thumbnail_folder_nb.clone(), downloaded_images_folder_nb.clone());
+
+            // Reset the scroll bar back to the top
+            scroll_window_clone_nb.vadjustment().set_value(0.0);
+        });
+
+        // Show the window.
+        wallpaper_window.window.present();
+    });
+
+
+    app.run();
+}
 
 fn create_search_object_response(search_text: String, current_page_inner: u16) -> Option<WHSearchResponse> {
     // Example: https://wallhaven.cc/api/v1/search?q=cats&page=1
