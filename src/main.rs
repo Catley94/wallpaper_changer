@@ -1,7 +1,9 @@
+use std::cell::RefCell;
 use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 use std::path::Path;
+use std::rc::Rc;
 use gtk4 as gtk;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, Entry, Button, Grid, Image, Label, Builder, CssProvider, StyleContext};
@@ -21,6 +23,20 @@ const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
 const WALLHAVEN_SEARCH_PARAM: &str = "search?q=";
 const WALLHAVEN_SEARCH_PAGE: &str = "page";
 const APP_ID: &str = "org.example.wallpaper_changer";
+
+#[derive(Clone)]
+struct AppState {
+    current_page: u16,
+    current_search: String,
+    flow_box: gtk::FlowBox,
+    page_label: gtk::Label,
+    prev_button: gtk::Button,
+    next_button: gtk::Button,
+    scroll_window: gtk::ScrolledWindow,
+    temp_thumbnail_folder: PathBuf,
+    downloaded_images_folder: PathBuf,
+}
+
 
 #[derive(Clone)]
 enum WallpaperMessage {
@@ -204,120 +220,159 @@ fn gui_mode() {
         let current_page = std::rc::Rc::new(std::cell::RefCell::new(1));
         let current_search = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
 
+        // Shared state
+        let state = Rc::new(RefCell::new(AppState {
+            current_page: 1,
+            current_search: String::new(),
+            flow_box: flow_box.clone(),
+            page_label: page_label.clone(),
+            prev_button: prev_button.clone(),
+            next_button: next_button.clone(),
+            scroll_window: scroll_window.clone(),
+            temp_thumbnail_folder: temp_thumbnail_folder.clone(),
+            downloaded_images_folder: downloaded_images_folder.clone(),
+        }));
+
+
+
         // Search button handler / Handle search button clicks
-        let current_page_clone_search = current_page.clone();
-        let current_search_clone_search = current_search.clone();
-        let flow_box_clone_search = flow_box.clone();
-        let temp_thumbnail_folder_clone_search = temp_thumbnail_folder.clone();
-        let downloaded_images_folder_clone_search = downloaded_images_folder.clone();
-        let page_label_clone_search = page_label.clone();
-        let prev_button_clone_search = prev_button.clone();
-        let next_button_clone_search = next_button.clone();
+        // let current_page_clone_search = current_page.clone();
+        // let current_search_clone_search = current_search.clone();
+        // let flow_box_clone_search = flow_box.clone();
+        // let temp_thumbnail_folder_clone_search = temp_thumbnail_folder.clone();
+        // let downloaded_images_folder_clone_search = downloaded_images_folder.clone();
+        // let page_label_clone_search = page_label.clone();
+        // let prev_button_clone_search = prev_button.clone();
+        // let next_button_clone_search = next_button.clone();
+        let state_search = state.clone();
 
         search_button.connect_clicked(move |_| {
             let search_text = search_entry.text().to_string();
-            let temp_thumbnail_folder = &temp_thumbnail_folder_clone_search;
+            let mut state = state_search.borrow_mut();
+            let temp_thumbnail_folder = state.temp_thumbnail_folder.to_str().unwrap();
 
-            download::clear_temp_thumbnails(temp_thumbnail_folder.to_str().unwrap());
+            download::clear_temp_thumbnails(state.temp_thumbnail_folder.to_str().unwrap());
 
             if !search_text.is_empty() {
-                *current_page_clone_search.borrow_mut() = 1;
-                *current_search_clone_search.borrow_mut() = search_text.clone();
+                // let mut state = state_search.borrow_mut();
+                state.current_page = 1;
+                state.current_search = search_text.clone();
 
                 // Update page number
-                page_label_clone_search.set_text(&format!("Page: {}", current_page_clone_search.borrow()));
+                state.page_label.set_text(&format!("Page: {}", state.current_page));
                 // Disable previous button
-                prev_button_clone_search.set_sensitive(false);
+                state.prev_button.set_sensitive(false);
                 // Enable next button
-                next_button_clone_search.set_sensitive(true);
+                state.next_button.set_sensitive(true);
 
                 // Clear existing thumbnails
-                while let Some(child) = flow_box_clone_search.first_child() {
-                    flow_box_clone_search.remove(&child);
+                while let Some(child) = state.flow_box.first_child() {
+                    state.flow_box.remove(&child);
                 }
 
                 // Update the grid with new the new images on the updated page number
-                update_grid(&flow_box_clone_search, &search_text, *current_page_clone_search.borrow(), temp_thumbnail_folder.clone(), downloaded_images_folder_clone_search.clone());
+                update_grid(
+                    &state.flow_box,
+                    &search_text,
+                    state.current_page,
+                    state.temp_thumbnail_folder.clone(),
+                    state.downloaded_images_folder.clone()
+                );
             }
         });
 
         // Previous button handler
-        let current_page_clone_pb = current_page.clone();
-        let flow_box_clone_pb = flow_box.clone();
-        let page_label_clone_pb = page_label.clone();
-        let prev_button_clone_pb = prev_button.clone();
-        let temp_thumbnail_folder_clone_pb = temp_thumbnail_folder.clone();
-        let downloaded_images_folder_clone_pb = downloaded_images_folder.clone();
-        let current_search_clone_pb = current_search.clone();
-        let scroll_window_clone_pb = scroll_window.clone();
+        // let current_page_clone_pb = current_page.clone();
+        // let flow_box_clone_pb = flow_box.clone();
+        // let page_label_clone_pb = page_label.clone();
+        // let prev_button_clone_pb = prev_button.clone();
+        // let temp_thumbnail_folder_clone_pb = temp_thumbnail_folder.clone();
+        // let downloaded_images_folder_clone_pb = downloaded_images_folder.clone();
+        // let current_search_clone_pb = current_search.clone();
+        // let scroll_window_clone_pb = scroll_window.clone();
+        let state_prev = state.clone();
 
         prev_button.connect_clicked(move |_| {
-            let mut page = current_page_clone_pb.borrow_mut();
+            let mut state = state_prev.borrow_mut();
+            // let mut page = current_page_clone_pb.borrow_mut();
 
             // Minus the page number by 1 if greater than 1
-            if *page > 1 {
-                *page -= 1;
+            if state.current_page > 1 {
+                state.current_page -= 1;
 
                 // Update page number and set the button to be enabled if the page number is greater than 1
-                page_label_clone_pb.set_text(&format!("Page: {}", *page));
-                prev_button_clone_pb.set_sensitive(*page > 1);
+                state.page_label.set_text(&format!("Page: {}", state.current_page));
+                state.prev_button.set_sensitive(state.current_page > 1);
 
                 // Clear existing thumbnails
-                while let Some(child) = flow_box_clone_pb.first_child() {
-                    flow_box_clone_pb.remove(&child);
+                while let Some(child) = state.flow_box.first_child() {
+                    state.flow_box.remove(&child);
                 }
 
                 // Update the grid with new the new images on the updated page number
-                update_grid(&flow_box_clone_pb, &current_search_clone_pb.borrow(), *page, temp_thumbnail_folder_clone_pb.clone(), downloaded_images_folder_clone_pb.clone());
+                update_grid(
+                    &state.flow_box,
+                    &state.current_search,
+                    state.current_page,
+                    state.temp_thumbnail_folder.clone(),
+                    state.downloaded_images_folder.clone()
+                );
 
                 // Reset the scroll bar back to the top
-                scroll_window_clone_pb.vadjustment().set_value(0.0);
+                state.scroll_window.vadjustment().set_value(0.0);
             }
         });
 
         // Next button handler
-        let current_page_clone_nb = current_page.clone();
-        let current_search_clone_nb = current_search.clone();
-        let flow_box_clone_nb = flow_box.clone();
-        let page_label_clone_nb = page_label.clone();
-        let prev_button_clone_nb = prev_button.clone();
-        let temp_thumbnail_folder_nb = temp_thumbnail_folder.clone();
-        let downloaded_images_folder_nb = downloaded_images_folder.clone();
-        let scroll_window_clone_nb = scroll_window.clone();
+        // let current_page_clone_nb = current_page.clone();
+        // let current_search_clone_nb = current_search.clone();
+        // let flow_box_clone_nb = flow_box.clone();
+        // let page_label_clone_nb = page_label.clone();
+        // let prev_button_clone_nb = prev_button.clone();
+        // let temp_thumbnail_folder_nb = temp_thumbnail_folder.clone();
+        // let downloaded_images_folder_nb = downloaded_images_folder.clone();
+        // let scroll_window_clone_nb = scroll_window.clone();
+        let state_next = state.clone();
 
         next_button.connect_clicked(move |button| {
+            let mut state = state_next.borrow_mut();
 
-            download::clear_temp_thumbnails(temp_thumbnail_folder_nb.to_str().unwrap());
+            download::clear_temp_thumbnails(state.temp_thumbnail_folder.to_str().unwrap());
 
-            let mut page = current_page_clone_nb.borrow_mut();
-            *page += 1;
+            state.current_page += 1;
 
             // Get response data to check last page
-            let search_text = current_search_clone_nb.borrow().to_string();
-            let response = create_search_object_response(search_text.clone(), *page);
+            let search_text = state.current_search.to_string();
+            let response = create_search_object_response(search_text.clone(), state.current_page);
 
 
             // Update page number
-            page_label_clone_nb.set_text(&format!("Page: {}", *page));
+            state.page_label.set_text(&format!("Page: {}", state.current_page));
 
             // Set button sensitivity based on current page and last page from response
             if let Some(response_data) = &response {
-                button.set_sensitive(*page < response_data.meta.last_page as u16);
+                button.set_sensitive(state.current_page < response_data.meta.last_page as u16);
             }
 
             // Enable the previous button if the page number is greater than 1
-            prev_button_clone_nb.set_sensitive(*page > 1);
+            state.prev_button.set_sensitive(state.current_page > 1);
 
             // Clear existing thumbnails
-            while let Some(child) = flow_box_clone_nb.first_child() {
-                flow_box_clone_nb.remove(&child);
+            while let Some(child) = state.flow_box.first_child() {
+                state.flow_box.remove(&child);
             }
 
             // Update the grid with new the new images on the updated page number
-            update_grid(&flow_box_clone_nb, &current_search_clone_nb.borrow(), *page, temp_thumbnail_folder_nb.clone(), downloaded_images_folder_nb.clone());
+            update_grid(
+                &state.flow_box,
+                &state.current_search,
+                state.current_page,
+                state.temp_thumbnail_folder.clone(),
+                state.downloaded_images_folder.clone()
+            );
 
             // Reset the scroll bar back to the top
-            scroll_window_clone_nb.vadjustment().set_value(0.0);
+            state.scroll_window.vadjustment().set_value(0.0);
         });
 
         // Show the window.
