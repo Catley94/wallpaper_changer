@@ -4,10 +4,12 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::path::Path;
 use std::rc::Rc;
+use actix_web::{web, App, HttpServer};
 use gtk4 as gtk;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, Entry, Button, Grid, Image, Label, Builder, CssProvider, StyleContext};
 use gtk4::gdk::Display;
+use crate::api::{search_theme};
 use crate::models::wallhaven::WHSearchResponse;
 
 
@@ -17,6 +19,7 @@ mod download;
 mod utils;
 mod file_manager;
 mod help_information;
+mod api;
 
 const WALLHAVEN_DIRECT_ID: &str = "https://wallhaven.cc/api/v1/w";
 const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
@@ -106,23 +109,37 @@ impl WallpaperWindow {
     }
 }
 
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-
-    let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
-    let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
-
-    let is_cli = std::env::args().len() > 1;
-
-    if is_cli {
-        cli_mode(temp_thumbnail_folder, downloaded_images_folder)?;
-    } else {
-        gui_mode();
-    }
-
-    Ok(())
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(api::search_theme)
+            .route("/hey", web::get().to(api::manual_hello))
+    })
+        .bind(("127.0.0.1:8080"))?
+        .run()
+        .await
 }
+
+
+// #[tokio::main]
+// async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//
+//     api::api_mode();
+//
+//     // let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
+//     // let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
+//     //
+//     // let is_cli = std::env::args().len() > 1;
+//     //
+//     // if is_cli {
+//     //     cli_mode(temp_thumbnail_folder, downloaded_images_folder)?;
+//     // } else {
+//     //     gui_mode();
+//     // }
+//
+//     Ok(())
+// }
 
 fn gui_mode() {
     let temp_thumbnail_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("temp_thumbs");
