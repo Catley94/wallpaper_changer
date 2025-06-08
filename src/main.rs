@@ -114,7 +114,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .service(api::search_theme)
-            .route("/hey", web::get().to(api::manual_hello))
+            .service(api::change_wallpaper)
     })
         .bind(("127.0.0.1:8080"))?
         .run()
