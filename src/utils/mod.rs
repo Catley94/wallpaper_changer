@@ -1,5 +1,14 @@
+use std::error::Error;
+use crate::models;
+
 pub mod flags;
 pub mod os;
+
+
+pub const WALLHAVEN_DIRECT_ID: &str = "https://wallhaven.cc/api/v1/w";
+pub const WALLHAVEN_SEARCH_API: &str = "https://wallhaven.cc/api/v1";
+pub const WALLHAVEN_SEARCH_PARAM: &str = "search?q=";
+pub const WALLHAVEN_SEARCH_PAGE: &str = "page";
 
 pub fn get_file_extension(file_type: &str) -> &str {
     match file_type.to_lowercase().as_str() {
@@ -9,4 +18,55 @@ pub fn get_file_extension(file_type: &str) -> &str {
         "image/webp" => "webp",
         _ => "jpg"  // default to jpg if unknown
     }
+}
+
+pub fn create_seach_query_object(topic_value: Option<String>, current_page: String) -> Result<String, Result<(), Box<dyn Error + Send + Sync>>> {
+    let search_query: String = match topic_value {
+        Some(topic) => format!(
+            "{}/{}{}&{}={}",
+            WALLHAVEN_SEARCH_API,
+            WALLHAVEN_SEARCH_PARAM,
+            topic,
+            WALLHAVEN_SEARCH_PAGE,
+            current_page
+        ),
+        None => {
+            eprintln!("Error: No topic provided.");
+            return Err(Ok(()));  // Exit the function early
+        }
+    };
+    Ok(search_query)
+}
+
+pub fn search_topic(search_query: &String) -> Result<models::wallhaven::WHSearchResponse, Box<dyn Error + Send + Sync>> {
+    let response = ureq::get(search_query.as_str())
+        .header("User-Agent", format!("wallpaper_changer/{}", env!("CARGO_PKG_VERSION")))
+        .call()?
+        .body_mut()
+        .read_json::<models::wallhaven::WHSearchResponse>()?;
+    Ok(response)
+}
+
+pub fn create_search_object_response(search_text: String, current_page_inner: u16) -> Option<models::wallhaven::WHSearchResponse> {
+    // Example: https://wallhaven.cc/api/v1/search?q=cats&page=1
+    let search_query = match create_seach_query_object(Some(search_text), current_page_inner.to_string()) {
+        Ok(value) => value,
+        Err(_) => String::new()
+    };
+
+    println!("Search query: {}", search_query);
+
+    // Get response back from API with query
+    // Returns the page of 24 results
+    let response: Option<models::wallhaven::WHSearchResponse> = match search_topic(&search_query) {
+        Ok(response) => {
+            // println!("Got response: {:?}", response);
+            Some(response)
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            None
+        }
+    };
+    response
 }

@@ -1,9 +1,7 @@
 use std::path::PathBuf;
-use std::thread::current;
 use actix_web::{main, get, post, web, App, HttpResponse, HttpServer, Responder};
 use serde::Deserialize;
-use crate::{create_search_object_response, download, models, utils, wallpaper};
-use crate::models::wallhaven::WHSearchResponse;
+use crate::{download, models, utils, wallpaper};
 
 #[derive(Deserialize)]
 struct SearchParams {
@@ -23,7 +21,7 @@ pub async fn search_theme(params: web::Query<SearchParams>
 ) -> impl Responder {
     println!("Topic: {}", params.topic);
     println!("Page: {}", params.page);
-    let response: Option<WHSearchResponse> = create_search_object_response(
+    let response: Option<models::wallhaven::WHSearchResponse> = utils::create_search_object_response(
         params.topic.clone(),
         params.page
     );
@@ -49,7 +47,7 @@ async fn change_wallpaper(params: web::Query<ChangeWallpaperParams>) -> Result<H
             println!("ID: {:?}", id);
             format!(
                 "{}/{}",
-                crate::WALLHAVEN_DIRECT_ID,
+                utils::WALLHAVEN_DIRECT_ID,
                 id
             )
         },
