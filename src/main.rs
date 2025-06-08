@@ -6,7 +6,6 @@ mod models;
 mod download;
 mod utils;
 mod file_manager;
-mod help_information;
 mod api;
 
 #[actix_web::main]
