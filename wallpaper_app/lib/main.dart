@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'models/search_response.dart';
 
+// Building app Linux (plus production build): https://docs.flutter.dev/platform-integration/linux/building
 
 void main() {
   runApp(const MyApp());
