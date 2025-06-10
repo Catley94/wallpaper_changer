@@ -132,36 +132,55 @@ class _WallpaperPageState extends State<WallpaperPage> {
                       ),
                       itemCount: _thumbnailPaths.length,
                       itemBuilder: (context, index) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 5,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(_thumbnailPaths[index]),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                print('Error loading image at path: ${_thumbnailPaths[index]}');
-                                print('Error details: $error');
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: const Center(
-                                    child: Icon(Icons.error),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      },
+  // Extract just the ID part (assuming format wallhaven-XXXXXX.jpg)
+  String imageId = _thumbnailPaths[index]
+      .split('/')
+      .last                    // Get filename from path
+      .replaceAll('wallhaven-', '') // Remove 'wallhaven-' prefix
+      .split('.')
+      .first;                  // Remove file extension
+
+  return InkWell(
+    onTap: () async {
+      print('Image Clicked: $imageId');
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8080/change-wallpaper?id=${imageId}'),
+      );
+
+      if (response.statusCode == 200) {
+        print('Wallpaper Changed');
+      }
+
+    },
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.file(
+          File(_thumbnailPaths[index]),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.grey[200],
+              child: const Center(
+                child: Icon(Icons.error),
+              ),
+            );
+          },
+        ),
+      ),
+    ),
+  );
+},
                     ),
             ),
 
