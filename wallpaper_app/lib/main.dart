@@ -38,15 +38,16 @@ class _WallpaperPageState extends State<WallpaperPage> {
   final TextEditingController _searchController = TextEditingController();
   List<String> _thumbnailPaths = [];
   bool _isLoading = false;
+  int page = 1;
 
   Future<void> _searchTheme() async {
     setState(() {
-      isLoading: true;
+      _isLoading = true;
       _thumbnailPaths = [];
     });
     try {
       final response = await http.get(
-        Uri.parse('http://127.0.0.1:8080/search?topic=${_searchController.text}&page=1'),
+        Uri.parse('http://127.0.0.1:8080/search?topic=${_searchController.text}&page=${page}'),
       );
       
       if (response.statusCode == 200) {
@@ -69,6 +70,22 @@ class _WallpaperPageState extends State<WallpaperPage> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _next() async {
+    setState(() {
+      page += 1;
+    });
+    _searchTheme();
+  }
+
+  Future<void> _previous() async {
+    setState(() {
+      if (page > 1) {
+        page -= 1;
+      }
+    });
+    _searchTheme();
   }
 
   Future<void> _changeWallpaper(String themeId) async {
@@ -113,75 +130,90 @@ class _WallpaperPageState extends State<WallpaperPage> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _searchTheme,
-              child: const Text('Search'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _previous,
+                  child: const Text('Previous'),
+                ),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _searchTheme,
+                  child: const Text('Search'),
+                ),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _next,
+                  child: const Text('Next'),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _thumbnailPaths.isEmpty
-                  ? const Center(
-                      child: Text('No images found'),
-                    )
-                  : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 300, // Maximum width for each item
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 16/9, // Maintain your aspect ratio
-                      ),
-                      itemCount: _thumbnailPaths.length,
-                      itemBuilder: (context, index) {
-  // Extract just the ID part (assuming format wallhaven-XXXXXX.jpg)
-  String imageId = _thumbnailPaths[index]
-      .split('/')
-      .last                    // Get filename from path
-      .replaceAll('wallhaven-', '') // Remove 'wallhaven-' prefix
-      .split('.')
-      .first;                  // Remove file extension
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _thumbnailPaths.isEmpty
+                      ? const Center(
+                          child: Text('No images found'),
+                        )
+                      : GridView.builder(
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 300, // Maximum width for each item
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 16/9, // Maintain your aspect ratio
+                          ),
+                          itemCount: _thumbnailPaths.length,
+                          itemBuilder: (context, index) {
+      // Extract just the ID part (assuming format wallhaven-XXXXXX.jpg)
+      String imageId = _thumbnailPaths[index]
+          .split('/')
+          .last                    // Get filename from path
+          .replaceAll('wallhaven-', '') // Remove 'wallhaven-' prefix
+          .split('.')
+          .first;                  // Remove file extension
 
-  return InkWell(
-    onTap: () async {
-      print('Image Clicked: $imageId');
-      final response = await http.get(
-        Uri.parse('http://127.0.0.1:8080/change-wallpaper?id=${imageId}'),
-      );
+      return InkWell(
+        onTap: () async {
+          print('Image Clicked: $imageId');
+          final response = await http.get(
+            Uri.parse('http://127.0.0.1:8080/change-wallpaper?id=${imageId}'),
+          );
 
-      if (response.statusCode == 200) {
-        print('Wallpaper Changed');
-      }
+          if (response.statusCode == 200) {
+            print('Wallpaper Changed');
+          }
 
-    },
-    child: Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.file(
-          File(_thumbnailPaths[index]),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.grey[200],
-              child: const Center(
-                child: Icon(Icons.error),
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 5,
+                offset: const Offset(0, 3),
               ),
-            );
-          },
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              File(_thumbnailPaths[index]),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: Icon(Icons.error),
+                  ),
+                );
+              },
+            ),
+          ),
         ),
-      ),
-    ),
-  );
-},
-                    ),
+      );
+    },
+                        ),
             ),
 
           ],
