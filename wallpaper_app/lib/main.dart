@@ -36,6 +36,7 @@ class WallpaperPage extends StatefulWidget {
 
 class _WallpaperPageState extends State<WallpaperPage> {
   final TextEditingController _searchController = TextEditingController();
+  String topic = "";
   List<String> _thumbnailPaths = [];
   bool _isLoading = false;
   int page = 1;
@@ -44,6 +45,12 @@ class _WallpaperPageState extends State<WallpaperPage> {
     setState(() {
       _isLoading = true;
       _thumbnailPaths = [];
+      if (_searchController.text != topic) {
+        // When the searching topic changes, revert back to page 1
+        topic = _searchController.text;
+        page = 1;
+        print("Resetting to page 1");
+      }
     });
     try {
       final response = await http.get(
@@ -74,6 +81,7 @@ class _WallpaperPageState extends State<WallpaperPage> {
 
   Future<void> _next() async {
     setState(() {
+      // Increase the page number
       page += 1;
     });
     _searchTheme();
@@ -82,18 +90,17 @@ class _WallpaperPageState extends State<WallpaperPage> {
   Future<void> _previous() async {
     setState(() {
       if (page > 1) {
+        // Decrease the page number
         page -= 1;
       }
     });
     _searchTheme();
   }
 
-  Future<void> _changeWallpaper(String themeId) async {
+  Future<void> _changeWallpaper(String imageId) async {
     try {
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8080/change'),
-        body: json.encode({'theme_id': themeId}),
-        headers: {'Content-Type': 'application/json'},
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8080/change-wallpaper?id=${imageId}'),
       );
       
       if (response.statusCode == 200) {
@@ -131,15 +138,18 @@ class _WallpaperPageState extends State<WallpaperPage> {
             ),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _previous,
+                  onPressed: _isLoading || page == 1 ? null : _previous,
                   child: const Text('Previous'),
                 ),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _searchTheme,
-                  child: const Text('Search'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: const Text('Search')
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _next,
@@ -175,14 +185,7 @@ class _WallpaperPageState extends State<WallpaperPage> {
       return InkWell(
         onTap: () async {
           print('Image Clicked: $imageId');
-          final response = await http.get(
-            Uri.parse('http://127.0.0.1:8080/change-wallpaper?id=${imageId}'),
-          );
-
-          if (response.statusCode == 200) {
-            print('Wallpaper Changed');
-          }
-
+          _changeWallpaper(imageId);
         },
         child: Container(
           decoration: BoxDecoration(
