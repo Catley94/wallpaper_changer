@@ -5,13 +5,13 @@ use std::path::Path;
 use crate::models::wallhaven::WHImageData;
 use crate::utils;
 
-pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
+pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
     let file_path = format!("{}/wallhaven-{}.{}", local_path, &image.id, utils::get_file_extension(&image.file_type));
 
     // Check if file already exists
     if Path::new(&file_path).exists() {
-        println!("File {} already exists, skipping download", file_path);
-        return Ok(());
+        println!("File {} already exists, skipping download", &file_path);
+        return Ok(file_path);
     }
     println!("Image ID: {}", image.id);
     println!("Image URL: {}", image.url);
@@ -19,7 +19,7 @@ pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn E
     println!("Image thumbs: {}", image.thumbs.small);
 
     // Create the output file
-    let mut image_file = File::create(file_path).expect("Failed to create file");
+    let mut image_file = File::create(&file_path).expect("Failed to create file");
 
     let image_request = ureq::get(&image.thumbs.small)
         .call()?;
@@ -33,7 +33,7 @@ pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<(), Box<dyn E
 
     // // Copy the response body to the file
     copy(&mut Cursor::new(bytes_buf), &mut image_file)?;
-    Ok(())
+    Ok(file_path)
 }
 
 pub fn original(image: &WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
