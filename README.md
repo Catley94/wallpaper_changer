@@ -13,7 +13,7 @@ Simple app which allows you to change your wallpaper by searching for a topic us
 
 ## How to install
 ### Windows:
-- Download the Windows Release .zip provided in Releases
+- Download `wallpaper_changer-release.zip` provided in Releases
 - Extract the zip
 - Run the `app_runner` file from terminal
 
@@ -28,10 +28,9 @@ Simple app which allows you to change your wallpaper by searching for a topic us
   - Allows you to run `wallpaper_changer` within terminal
 
 #### Alternative way:
-- Download the Linux Release .zip provided in Releases
-  - _Release install script coming soon_
+- Download `wallpaper_changer-release.zip` provided in Releases
 - Extract the zip
-- Run the `app_runner` file from terminal
+- Run the `release_install.sh` file from terminal
 
 ## How to use
 - Type a topic in the search box 
