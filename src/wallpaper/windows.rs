@@ -9,21 +9,18 @@ pub fn explorer(path: &str) -> std::io::Result<std::process::Output> {
         ))
     }
 
-    #[cfg(target_os = "windows")]
-    {
-        println!("Windows: Setting wallpaper to {}", path);
-        // Using PowerShell to set wallpaper on Windows
-        Command::new("powershell")
-            .args([
-                "-command",
-                "Set-ItemProperty -path 'HKCU:\\Control Panel\\Desktop\\' -name Wallpaper -value",
-                path,
-                ";",
-                "RUNDLL32.EXE",
-                "user32.dll,UpdatePerUserSystemParameters",
-                ",1",
-                ",True",
-            ])
-            .output()
-    }
+    println!("Windows: Setting wallpaper to {}", path);
+    // Using PowerShell to set wallpaper on Windows
+    Command::new("powershell")
+        .args([
+            "-command",
+            "Set-ItemProperty -path 'HKCU:\\Control Panel\\Desktop\\' -name Wallpaper -value",
+            path,
+            ";",
+            "RUNDLL32.EXE",
+            "user32.dll,UpdatePerUserSystemParameters",
+            ",1",
+            ",True",
+        ])
+        .output()
 }
