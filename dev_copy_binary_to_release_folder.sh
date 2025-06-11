@@ -59,6 +59,6 @@ cp ./release_uninstall.sh ./${RELEASE_FOLDER_NAME}
 echo "Creating zip archive..."
 zip -r "${RUST_PROGRAM_NAME}-${RELEASE_FOLDER_NAME}.zip" "./$RELEASE_FOLDER_NAME"
 
-#rm -rf ./${RELEASE_FOLDER_NAME}
+rm -rf ./${RELEASE_FOLDER_NAME}
 
 echo "Done!"
