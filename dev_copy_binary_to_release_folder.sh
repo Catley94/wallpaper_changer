@@ -39,8 +39,8 @@ cd ..
 
 
 echo "Making release folder within project"
-mkdir -p ./${$RELEASE_FOLDER_NAME}
-mkdir -p ./$RELEASE_FOLDER_NAME/apps
+mkdir -p ./${RELEASE_FOLDER_NAME}
+mkdir -p ./${RELEASE_FOLDER_NAME}/apps
 
 echo "copying (release)Rust API: ${RUST_PROGRAM_NAME} to ./${RELEASE_FOLDER_NAME}"
 cp ./target/release/$RUST_PROGRAM_NAME ./${RELEASE_FOLDER_NAME}/apps
