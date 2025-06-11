@@ -4,3 +4,9 @@
 **/.idea
 /temp_thumbs/
 /downloaded_images/
+/thumbnails
+/app_runner/target
+/release_test
+/wallpaper_changer
+wallpaper_changer-release.zip
+/release

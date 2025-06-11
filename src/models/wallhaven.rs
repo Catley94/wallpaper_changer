@@ -1,12 +1,12 @@
-use serde::Deserialize;
+use serde::{ Deserialize, Serialize};
 
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHSearchResponse {
     pub data: Vec<WHImageData>,
     pub meta: WHSearchMetaData,
 }
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHSearchMetaData {
     pub current_page: i32,
     pub last_page: i32,
@@ -16,13 +16,13 @@ pub struct WHSearchMetaData {
     pub seed: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHDirectModel {
     pub data: WHImageData,
 }
 
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHTag {
     pub id: i32,
     pub name: String,
@@ -33,7 +33,7 @@ pub struct WHTag {
     pub created_at: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHAvatar {
     #[serde(rename = "200px")]
     pub px200: String,
@@ -45,7 +45,7 @@ pub struct WHAvatar {
     pub px20: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHUploader {
     pub username: String,
     pub group: String,
@@ -53,7 +53,7 @@ pub struct WHUploader {
 }
 
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHImageData {
     pub id: String,
     pub url: String,
@@ -81,7 +81,7 @@ pub struct WHImageData {
 }
 
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WHImageThumbnailImageData {
     large: String,
     original: String,

@@ -4,7 +4,7 @@ use crate::utils;
 use crate::utils::os::OperatingSystem;
 
 pub mod linux;
-
+pub mod windows;
 
 pub fn change(path: &str) -> std::io::Result<Output> {
     // TODO: Find out what OS is running
@@ -16,10 +16,7 @@ pub fn change(path: &str) -> std::io::Result<Output> {
 
     match utils::os::get_operating_system() {
         OperatingSystem::Linux => linux::gnome(path),
-        OperatingSystem::Windows => std::io::Result::Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "Windows is not supported yet"
-        )),
+        OperatingSystem::Windows => windows::explorer(path),
         OperatingSystem::MacIntel | OperatingSystem::MacArm => std::io::Result::Err(std::io::Error::new(
             std::io::ErrorKind::Unsupported,
             "MacOS is not supported yet"
