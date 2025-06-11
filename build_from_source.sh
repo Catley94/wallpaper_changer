@@ -3,6 +3,7 @@
 RUST_PROGRAM_NAME="wallpaper_changer"
 FLUTTER_PROGRAM_NAME="wallpaper_app"
 APP_RUNNER_PROGRAM_NAME="app_runner"
+ALIASES=("wallpaper_changer")
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
@@ -96,6 +97,12 @@ install_program() {
     # Copy Rust App Runner binary
     cp "./${APP_RUNNER_PROGRAM_NAME}/target/release/${APP_RUNNER_PROGRAM_NAME}" "/usr/share/${RUST_PROGRAM_NAME}/"
     chmod +x "/usr/share/${RUST_PROGRAM_NAME}/${APP_RUNNER_PROGRAM_NAME}"
+
+    # Create symlink(s)
+    for alias in "${ALIASES[@]}"; do
+      echo "Creating symbolic link in /usr/local/bin for ${alias}"
+      ln -sf "/usr/share/${RUST_PROGRAM_NAME}/${APP_RUNNER_PROGRAM_NAME}" "/usr/local/bin/${alias}"
+    done
 
 }
 
