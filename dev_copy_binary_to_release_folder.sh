@@ -51,14 +51,14 @@ cp -r ./wallpaper_app/build/linux/x64/release/bundle ./${RELEASE_FOLDER_NAME}/ap
 echo "copying (release)Rust - $APP_RUNNER_PROGRAM_NAME to ./${RELEASE_FOLDER_NAME}"
 cp ./app_runner/target/release/${APP_RUNNER_PROGRAM_NAME} ./${RELEASE_FOLDER_NAME}
 
-#echo "copying release_install.sh to ./${RUST_PROGRAM_NAME}"
-#cp release_install.sh ./${RUST_PROGRAM_NAME}
-#echo "copying release_uninstall.sh to ./${RUST_PROGRAM_NAME}"
-#cp release_uninstall.sh ./${RUST_PROGRAM_NAME}
+echo "copying release_install.sh to ./${RUST_PROGRAM_NAME}"
+cp ./release_install.sh ./${RELEASE_FOLDER_NAME}
+echo "copying release_uninstall.sh to ./${RUST_PROGRAM_NAME}"
+cp ./release_uninstall.sh ./${RELEASE_FOLDER_NAME}
 
 echo "Creating zip archive..."
 zip -r "${RUST_PROGRAM_NAME}-${RELEASE_FOLDER_NAME}.zip" "./$RELEASE_FOLDER_NAME"
 
-rm -rf ./${RELEASE_FOLDER_NAME}
+#rm -rf ./${RELEASE_FOLDER_NAME}
 
 echo "Done!"
