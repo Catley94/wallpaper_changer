@@ -12,38 +12,36 @@ fn get_app_paths() -> (String, String) {
     let exec_dir = exec_path.parent()
         .expect("Failed to get executable directory");
 
-    // Check if we're in the release environment (installed in /usr/share or similar)
+    // Check if we're in the release environment
     if exec_dir.join("apps").exists() {
         // Release mode - use relative paths from executable location
         (
-            exec_dir.join("apps/wallpaper_changer").to_string_lossy().to_string(),
-            exec_dir.join("apps/bundle/wallpaper_app").to_string_lossy().to_string()
+            exec_dir.join("apps")
+                .join("wallpaper_changer.exe")
+                .to_string_lossy()
+                .to_string(),
+            exec_dir.join("apps")
+                .join("bundle")
+                .join("wallpaper_app.exe")
+                .to_string_lossy()
+                .to_string()
         )
     } else {
         // Development mode - use development paths
-        (
-            "target/release/wallpaper_changer".to_string(),
-            "wallpaper_app/build/linux/x64/release/bundle/wallpaper_app".to_string()
-        )
+        if cfg!(windows) {
+            (
+                "target\\release\\wallpaper_changer.exe".to_string(),
+                "wallpaper_app\\build\\windows\\runner\\Release\\wallpaper_app.exe".to_string()
+            )
+        } else {
+            (
+                "target/release/wallpaper_changer".to_string(),
+                "wallpaper_app/build/linux/x64/release/bundle/wallpaper_app".to_string()
+            )
+        }
     }
 }
 
-
-fn get_executable_paths() -> (String, String) {
-    if cfg!(debug_assertions) {
-        // Debug mode - use target/debug paths
-        (
-            format!("../target/debug/{}", RUST_WALLPAPER_CHANGER_NAME),
-            format!("../wallpaper_app/build/linux/x64/debug/bundle/{}", FLUTTER_WALLPAPER_APP_NAME)
-        )
-    } else {
-        // Release mode - use the release paths
-        (
-            "./apps/wallpaper_changer".to_string(),
-            "./apps/bundle/wallpaper_app".to_string()
-        )
-    }
-}
 
 
 fn main() {

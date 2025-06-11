@@ -19,6 +19,13 @@ install_program() {
     mkdir -p /usr/share/$RUST_PROGRAM_NAME
     mkdir -p /usr/share/$RUST_PROGRAM_NAME/apps
 
+    # Create user data directories
+    echo "Creating user data directories: ~/.local/share/wallpaper_changer/*"
+    mkdir -p ~/.local/share/wallpaper_changer
+    mkdir -p ~/.local/share/wallpaper_changer/thumbnails
+    mkdir -p ~/.local/share/wallpaper_changer/downloaded_images
+
+
     # Copy Rust API binary
     cp "./apps/${RUST_PROGRAM_NAME}" "/usr/share/${RUST_PROGRAM_NAME}/apps"
     chmod +x "/usr/share/${RUST_PROGRAM_NAME}/apps/${RUST_PROGRAM_NAME}"

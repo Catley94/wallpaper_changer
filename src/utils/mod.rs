@@ -1,5 +1,8 @@
 use std::error::Error;
 use crate::models;
+use std::path::PathBuf;
+use crate::utils::os::{ get_operating_system, OperatingSystem};
+
 
 pub mod flags;
 pub mod os;
@@ -70,3 +73,68 @@ pub fn create_search_object_response(search_text: String, current_page_inner: u1
     };
     response
 }
+
+pub fn get_app_data_directory() -> PathBuf {
+    if cfg!(debug_assertions) {
+        // In debug mode, use paths within the project directory
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    } else {
+        // In release mode, use paths relative to the executable
+        match get_operating_system() {
+            OperatingSystem::Windows => {
+                // Windows release mode - next to executable
+                std::env::current_exe()
+                    .expect("Failed to get executable path")
+                    .parent()
+                    .expect("Failed to get executable directory")
+                    .to_path_buf()
+            },
+            OperatingSystem::Linux => {
+                // Linux release mode - use /usr/share/wallpaper_changer
+                PathBuf::from("/usr/share/wallpaper_changer") // TODO: MAGIC STRING
+            },
+            _ => {
+                // Fallback to executable directory for unknown/unsupported OS
+                std::env::current_exe()
+                    .expect("Failed to get executable path")
+                    .parent()
+                    .expect("Failed to get executable directory")
+                    .to_path_buf()
+            }
+        }
+
+    }
+}
+
+pub fn get_user_data_directory() -> PathBuf {
+    if cfg!(debug_assertions) {
+        // In debug mode, use paths within the project directory
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    } else {
+        match get_operating_system() {
+            OperatingSystem::Windows => {
+                // Windows - store user data next to executable
+                get_app_data_directory()
+            },
+            OperatingSystem::Linux => {
+                // Linux - use XDG data directory
+                dirs::data_dir()
+                    .unwrap_or(PathBuf::from("/home")
+                        .join(std::env::var("USER").unwrap_or_default()))
+                    .join(".local/share/wallpaper_changer")
+            },
+            _ => get_app_data_directory()
+        }
+    }
+}
+
+
+pub fn get_thumbnails_directory() -> PathBuf {
+    get_user_data_directory().join("thumbnails")
+}
+
+pub fn get_downloads_directory() -> PathBuf {
+    get_user_data_directory().join("downloaded_images")
+}
+
+
