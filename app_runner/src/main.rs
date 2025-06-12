@@ -15,17 +15,32 @@ fn get_app_paths() -> (String, String) {
     // Check if we're in the release environment
     if exec_dir.join("apps").exists() {
         // Release mode - use relative paths from executable location
-        (
-            exec_dir.join("apps")
-                .join("wallpaper_changer.exe")
-                .to_string_lossy()
-                .to_string(),
-            exec_dir.join("apps")
-                .join("bundle")
-                .join("wallpaper_app.exe")
-                .to_string_lossy()
-                .to_string()
-        )
+        if cfg!(windows) {
+            (
+                exec_dir.join("apps")
+                    .join("wallpaper_changer.exe")
+                    .to_string_lossy()
+                    .to_string(),
+                exec_dir.join("apps")
+                    .join("bundle")
+                    .join("wallpaper_app.exe")
+                    .to_string_lossy()
+                    .to_string()
+            )
+        } else {
+            // Linux paths
+            (
+                exec_dir.join("apps")
+                    .join("wallpaper_changer")
+                    .to_string_lossy()
+                    .to_string(),
+                exec_dir.join("apps")
+                    .join("bundle")
+                    .join("wallpaper_app")
+                    .to_string_lossy()
+                    .to_string()
+            )
+        }
     } else {
         // Development mode - use development paths
         if cfg!(windows) {
@@ -41,6 +56,7 @@ fn get_app_paths() -> (String, String) {
         }
     }
 }
+
 
 
 

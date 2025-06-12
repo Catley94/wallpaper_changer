@@ -75,7 +75,7 @@ pub fn create_search_object_response(search_text: String, current_page_inner: u1
 }
 
 pub fn get_app_data_directory() -> PathBuf {
-    if cfg!(debug_assertions) {
+    if cfg!(debug_assertions) { // TODO: Currently this is inverted, remove "!"
         // In debug mode, use paths within the project directory
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     } else {
@@ -83,6 +83,7 @@ pub fn get_app_data_directory() -> PathBuf {
         match get_operating_system() {
             OperatingSystem::Windows => {
                 // Windows release mode - next to executable
+                println!("Windows release mode - next to executable");
                 std::env::current_exe()
                     .expect("Failed to get executable path")
                     .parent()
@@ -91,10 +92,12 @@ pub fn get_app_data_directory() -> PathBuf {
             },
             OperatingSystem::Linux => {
                 // Linux release mode - use /usr/share/wallpaper_changer
+                println!("Linux release mode - use /usr/share/wallpaper_changer");
                 PathBuf::from("/usr/share/wallpaper_changer") // TODO: MAGIC STRING
             },
             _ => {
                 // Fallback to executable directory for unknown/unsupported OS
+                println!("Fallback to executable directory for unknown/unsupported OS");
                 std::env::current_exe()
                     .expect("Failed to get executable path")
                     .parent()
@@ -118,10 +121,13 @@ pub fn get_user_data_directory() -> PathBuf {
             },
             OperatingSystem::Linux => {
                 // Linux - use XDG data directory
+                println!("Linux - use XDG data directory: {}", std::env::var("USER").unwrap_or_default());
+                println!("dirs::data_dir(): {:?}", dirs::data_dir().unwrap().join("wallpaper_changer"));
+                
                 dirs::data_dir()
-                    .unwrap_or(PathBuf::from("/home")
-                        .join(std::env::var("USER").unwrap_or_default()))
-                    .join(".local/share/wallpaper_changer")
+                    .unwrap()
+                    .join("wallpaper_changer")
+                // get_app_data_directory()
             },
             _ => get_app_data_directory()
         }
@@ -134,7 +140,7 @@ pub fn get_thumbnails_directory() -> PathBuf {
 }
 
 pub fn get_downloads_directory() -> PathBuf {
-    get_user_data_directory().join("downloaded_images")
+    get_user_data_directory().join("wallpapers")
 }
 
 

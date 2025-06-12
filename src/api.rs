@@ -31,7 +31,10 @@ pub async fn search_theme(params: web::Query<SearchParams>
     println!("Page: {}", params.page);
 
     // Create thumbnails directory if it doesn't exist
-    let thumbnails_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("thumbnails");
+    let thumbnails_folder = utils::get_thumbnails_directory();
+
+    println!("Thumbnails folder: {}", thumbnails_folder.to_str().unwrap());
+
     if !thumbnails_folder.exists() {
         std::fs::create_dir_all(&thumbnails_folder)
             .expect("Failed to create thumbnails directory");
@@ -81,7 +84,9 @@ async fn change_wallpaper(params: web::Query<ChangeWallpaperParams>) -> Result<H
 {
     println!("Change wallpaper");
 
-    let downloaded_images_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("downloaded_images");
+    let downloaded_images_folder = utils::get_downloads_directory();
+
+    println!("Downloaded images folder: {}", downloaded_images_folder.to_str().unwrap());
 
     let change_wallpaper_search_query: String = match &params.id {
         Some(id) => {
