@@ -84,6 +84,7 @@ pub fn get_app_data_directory() -> PathBuf {
             OperatingSystem::Windows => {
                 // Windows release mode - next to executable
                 println!("Windows release mode - next to executable");
+                println!("Current executable path: {:?}", std::env::current_exe().unwrap());
                 std::env::current_exe()
                     .expect("Failed to get executable path")
                     .parent()

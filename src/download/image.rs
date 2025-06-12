@@ -7,7 +7,15 @@ use crate::models::wallhaven::WHImageData;
 use crate::utils;
 
 pub fn thumbnail(image: &&WHImageData, local_path: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
-    let file_path = format!("{}/wallhaven-{}.{}", local_path, &image.id, utils::get_file_extension(&image.file_type));
+    let file_name = format!("wallhaven-{}.{}",
+                            &image.id,
+                            utils::get_file_extension(&image.file_type)
+    );
+
+    let file_path = PathBuf::from(local_path)
+        .join(file_name)
+        .to_string_lossy()
+        .into_owned();
 
     // Check if file already exists
     if Path::new(&file_path).exists() {
