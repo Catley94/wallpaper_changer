@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'models/search_response.dart';
+import 'package:path/path.dart' as path;
+
 
 // Building app Linux (plus production build): https://docs.flutter.dev/platform-integration/linux/building
 
@@ -61,8 +63,10 @@ class _WallpaperPageState extends State<WallpaperPage> {
       if (response.statusCode == 200) {
         final searchResponse = SearchResponse.fromJson(json.decode(response.body));
         setState(() {
-          _thumbnailPaths = searchResponse.thumbnailPaths;
-
+          _thumbnailPaths = searchResponse.thumbnailPaths.map((thumbnailPath) {
+            // Normalize and replace backslashes
+            return path.normalize(thumbnailPath).replaceAll(r'\', '/');
+          }).toList();
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -175,48 +179,49 @@ class _WallpaperPageState extends State<WallpaperPage> {
                           ),
                           itemCount: _thumbnailPaths.length,
                           itemBuilder: (context, index) {
-      // Extract just the ID part (assuming format wallhaven-XXXXXX.jpg)
-      String imageId = _thumbnailPaths[index]
-          .split('/')
-          .last                    // Get filename from path
-          .replaceAll('wallhaven-', '') // Remove 'wallhaven-' prefix
-          .split('.')
-          .first;                  // Remove file extension
 
-      return InkWell(
-        onTap: () async {
-          print('Image Clicked: $imageId');
-          _changeWallpaper(imageId);
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 5,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.file(
-              File(_thumbnailPaths[index]),
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Icon(Icons.error),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      );
-    },
+                            // Extract just the ID part (assuming format wallhaven-XXXXXX.jpg)
+                            String imageId = _thumbnailPaths[index]
+                                .split('/')
+                                .last                    // Get filename from path
+                                .replaceAll('wallhaven-', '') // Remove 'wallhaven-' prefix
+                                .split('.')
+                                .first;                  // Remove file extension
+
+                            return InkWell(
+                              onTap: () async {
+                                print('Image Clicked: $imageId');
+                                _changeWallpaper(imageId);
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(_thumbnailPaths[index]),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: const Center(
+                                          child: Icon(Icons.error),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
             ),
 
