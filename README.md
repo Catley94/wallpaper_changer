@@ -51,3 +51,9 @@ This program self cleans, meaning once the thumbnails folder is over 500MB, it w
     - Front end to interact with the API and display thumbnails
   - app_runner (Rust App Runner `./app_runner`)
     - To easily run both the Rust API and Flutter frontend at the same time
+
+### To update the build
+- Make changes to code
+- Run `source_code_uninstall.sh` to uninstall any existing builds
+- Run `source_code_install.sh` to install new build
+- If it works, run `dev_copy_binary_to_release_folder.<sh/bat>`

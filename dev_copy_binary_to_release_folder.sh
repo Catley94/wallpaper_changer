@@ -5,10 +5,15 @@ FLUTTER_PROGRAM_NAME="wallpaper_app"
 APP_RUNNER_PROGRAM_NAME="app_runner"
 RELEASE_FOLDER_NAME="release"
 
+# Get version from Cargo.toml
+VERSION=$(grep -m1 '^version = ' Cargo.toml | cut -d '"' -f2)
+
 if ! command -v zip >/dev/null 2>&1; then
     echo "Error: zip command not found. Please install zip first"
     exit 1
 fi
+
+echo "Building version: linux-release-${VERSION}"
 
 echo "Removing ${RUST_PROGRAM_NAME}.zip"
 rm ./${RUST_PROGRAM_NAME}.zip
@@ -57,8 +62,8 @@ echo "copying release_uninstall.sh to ./${RUST_PROGRAM_NAME}"
 cp ./release_uninstall.sh ./${RELEASE_FOLDER_NAME}
 
 echo "Creating zip archive..."
-zip -r "linux-release.zip" "./$RELEASE_FOLDER_NAME"
+zip -r "linux-release-${VERSION}.zip" "./$RELEASE_FOLDER_NAME"
 
 rm -rf ./${RELEASE_FOLDER_NAME}
 
-echo "Done!"
+echo "Done! Created linux-release-v${VERSION}.zip"
