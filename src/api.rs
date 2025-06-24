@@ -30,6 +30,9 @@ pub async fn search_theme(params: web::Query<SearchParams>
     println!("Topic: {}", params.topic);
     println!("Page: {}", params.page);
 
+    // Replace spaces with %20 in the topic
+    let encoded_topic = params.topic.replace(' ', "%20");
+
     // Create thumbnails directory if it doesn't exist
     let thumbnails_folder = utils::get_thumbnails_directory();
 
@@ -40,10 +43,8 @@ pub async fn search_theme(params: web::Query<SearchParams>
             .expect("Failed to create thumbnails directory");
     }
 
-
-
     let response: Option<models::wallhaven::WHSearchResponse> = utils::create_search_object_response(
-        params.topic.clone(),
+        encoded_topic.clone(),
         params.page
     );
 

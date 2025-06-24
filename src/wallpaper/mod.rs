@@ -7,9 +7,9 @@ pub mod linux;
 pub mod windows;
 
 pub fn change(path: &str) -> std::io::Result<Output> {
-    // TODO: Find out what OS is running
     
     if !Path::new(&path).exists() {
+        // If path does not exist
         eprintln!("File does not exist {}", &path);
         panic!("File {} does not exist", &path);
     }

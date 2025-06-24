@@ -1,5 +1,5 @@
 use std::error::Error;
-use actix_web::{web, App, HttpServer};
+use actix_web::{App, HttpServer};
 
 mod wallpaper;
 mod models;
