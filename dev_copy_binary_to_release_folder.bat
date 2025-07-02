@@ -6,14 +6,22 @@ set "FLUTTER_PROGRAM_NAME=wallpaper_app"
 set "APP_RUNNER_PROGRAM_NAME=app_runner"
 set "RELEASE_FOLDER_NAME=windows-release"
 
+:: Get version from Cargo.toml
+for /f "tokens=3" %%i in ('findstr /C:"version = " Cargo.toml') do (
+    set VERSION=%%i
+    set VERSION=!VERSION:"=!
+    goto :found_version
+)
+:found_version
+
 where powershell >nul 2>&1
 if errorlevel 1 (
     echo Error: PowerShell is required for ZIP functionality
     exit /b 1
 )
 
-echo Removing %RUST_PROGRAM_NAME%.zip
-if exist .\%RUST_PROGRAM_NAME%.zip del /F /Q .\%RUST_PROGRAM_NAME%.zip
+echo Removing %RELEASE_FOLDER_NAME%-*.zip
+if exist .\%RELEASE_FOLDER_NAME%-*.zip del .\%RELEASE_FOLDER_NAME%-*.zip
 
 echo Removing old release folder
 if exist .\%RELEASE_FOLDER_NAME% rd /S /Q .\%RELEASE_FOLDER_NAME%
@@ -63,7 +71,8 @@ echo copying release_uninstall.bat to .\%RELEASE_FOLDER_NAME%
 if exist .\release_uninstall.bat copy .\release_uninstall.bat .\%RELEASE_FOLDER_NAME%
 
 echo Creating zip archive...
-powershell Compress-Archive -Path .\%RELEASE_FOLDER_NAME% -DestinationPath .\%RELEASE_FOLDER_NAME%.zip -Force
+powershell Compress-Archive -Path .\%RELEASE_FOLDER_NAME% -DestinationPath .\windows-release-!VERSION!.zip -Force
+
 
 
 
