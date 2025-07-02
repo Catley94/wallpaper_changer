@@ -12,3 +12,5 @@ wallpaper_changer-release.zip
 /release
 /wallpapers
 *.zip
+/windows-release
+/wallpaper_app/linux/flutter
