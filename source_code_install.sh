@@ -16,23 +16,47 @@ fi
 
 # Check if flutter is installed
 check_flutter() {
-    # At the start of your script, find and store Flutter's path
-    FLUTTER_BIN=$(sudo -u "$REAL_USER" bash -l -c 'command -v flutter')
-    if [ -z "$FLUTTER_BIN" ]; then
-        echo "Error: Flutter not found in PATH. Please make sure Flutter is properly installed."
-        exit 1
-    fi
-
     REAL_USER="${SUDO_USER:-$USER}"
     HOME_DIR=$(eval echo ~$REAL_USER)
 
-    # Try to find flutter by running a login shell that sources profile files
-    if ! sudo -u "$REAL_USER" bash -l -c 'command -v flutter' >/dev/null 2>&1; then
-        echo "Error: Flutter SDK not found. Please install Flutter first"
+    # Source profile files and check flutter
+    FLUTTER_BIN=$(sudo -u "$REAL_USER" bash -c 'source ~/.profile 2>/dev/null; source ~/.bashrc 2>/dev/null; command -v flutter')
+    if [ -z "$FLUTTER_BIN" ]; then
+        # Try direct path if environment variable approach failed
+        if [ -x "/home/$REAL_USER/flutter_sdk/flutter/bin/flutter" ]; then
+            FLUTTER_BIN="/home/$REAL_USER/flutter_sdk/flutter/bin/flutter"
+        else
+            echo "Error: Flutter not found in PATH. Please make sure Flutter is properly installed."
+            exit 1
+        fi
+    fi
+
+    # Verify flutter is actually executable
+    if ! sudo -u "$REAL_USER" "$FLUTTER_BIN" --version >/dev/null 2>&1; then
+        echo "Error: Flutter SDK not found or not executable. Please install Flutter first"
         echo "Make sure Flutter is in your PATH and properly configured"
         echo "Visit https://docs.flutter.dev/get-started/install/linux"
         exit 1
     fi
+
+
+
+#    # At the start of your script, find and store Flutter's path
+#    FLUTTER_BIN=$(sudo -u "$REAL_USER" bash -l -c 'command -v flutter')
+#    if [ -z "$FLUTTER_BIN" ]; then
+#        echo "Error: Flutter not found in PATH. Please make sure Flutter is properly installed."
+#        exit 1
+#    fi
+
+
+
+#    # Try to find flutter by running a login shell that sources profile files
+#    if ! sudo -u "$REAL_USER" bash -l -c 'command -v flutter' >/dev/null 2>&1; then
+#        echo "Error: Flutter SDK not found. Please install Flutter first"
+#        echo "Make sure Flutter is in your PATH and properly configured"
+#        echo "Visit https://docs.flutter.dev/get-started/install/linux"
+#        exit 1
+#    fi
 
 }
 
