@@ -3,6 +3,8 @@ _name subject to change_
 
 Simple app which allows you to change your wallpaper by searching for a topic using the wallhaven.cc source API.
 
+![wallpaper_changer.png](README_images/wallpaper_changer.png)
+
 ### Supports:
 - Linux (Gnome only, other DEs coming soon)
   - Can use Linux Release .zip provided in Releases
