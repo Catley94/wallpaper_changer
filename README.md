@@ -44,6 +44,22 @@ Simple app which allows you to change your wallpaper by searching for a topic us
 ### Important Notes for usage
 This program self cleans, meaning once the thumbnails folder is over 500MB, it will delete all thumbnails inside.
 
+### Collections / Tags
+- You can now create collections (tags) and tag images.
+- Where files go:
+  - Thumbnails: user data dir/thumbnails
+  - Downloads: user data dir/wallpapers
+  - Collections: user data dir/collections/<tag>/ (contains copies of downloaded images)
+- In the app:
+  - Use the bottom navigation to switch to the Collections tab.
+  - Press the + button to create a new tag.
+  - Go to the Search tab, long-press any thumbnail, select a tag to add it. This downloads the original (if not yet) and copies it into the tag folder.
+
+Backend endpoints (for reference):
+- GET /collections → Lists tags and their image paths.
+- POST /collections/tags { name } → Creates a tag folder.
+- POST /collections/tag-image { id, tag } → Downloads the image by id and copies it into the tag folder.
+
 ## Developer Notes
 - This program uses the wallhaven.cc API
 - This project has three projects included:

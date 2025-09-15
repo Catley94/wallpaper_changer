@@ -144,4 +144,25 @@ pub fn get_downloads_directory() -> PathBuf {
     get_user_data_directory().join("wallpapers")
 }
 
+pub fn get_collections_directory() -> PathBuf {
+    get_user_data_directory().join("collections")
+}
+
+pub fn ensure_dir(path: &PathBuf) -> std::io::Result<()> {
+    if !path.exists() {
+        std::fs::create_dir_all(path)?;
+    }
+    Ok(())
+}
+
+pub fn sanitize_tag_name(name: &str) -> String {
+    let mut s: String = name.trim().to_string();
+    // Replace path separators and illegal characters with '_'
+    let invalid = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+    for ch in invalid {
+        s = s.replace(ch, "_");
+    }
+    s
+}
+
 

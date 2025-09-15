@@ -14,6 +14,9 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .service(api::search_theme)
             .service(api::change_wallpaper)
+            .service(api::create_tag)
+            .service(api::tag_image)
+            .service(api::list_collections)
     })
         .bind(("127.0.0.1:8080"))?
         .run()
