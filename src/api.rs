@@ -228,3 +228,36 @@ pub async fn list_collections() -> impl Responder {
     let resp = CollectionsResp { tags: items };
     HttpResponse::Ok().json(resp)
 }
+
+// New endpoint: change wallpaper from a local file path
+#[derive(Deserialize)]
+pub struct ChangeFromPathBody { pub path: String }
+
+#[post("/change-wallpaper-from-path")]
+pub async fn change_wallpaper_from_path(body: web::Json<ChangeFromPathBody>) -> impl Responder {
+    let p = Path::new(&body.path);
+    if !p.exists() || !p.is_file() {
+        return HttpResponse::BadRequest().body("Invalid file path");
+    }
+
+    let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+    if ext == "mp4" || ext == "mkv" || ext == "webm" {
+        match wallpaper::start_video(p.to_string_lossy().as_ref()) {
+            Ok(_) => HttpResponse::Ok().finish(),
+            Err(e) => {
+                use std::io::ErrorKind;
+                let kind = e.kind();
+                let msg = format!("Failed to start video wallpaper: {}", e);
+                match kind {
+                    ErrorKind::NotFound | ErrorKind::Unsupported => HttpResponse::NotImplemented().body(msg),
+                    _ => HttpResponse::InternalServerError().body(msg),
+                }
+            }
+        }
+    } else {
+        match wallpaper::change(p.to_string_lossy().as_ref()) {
+            Ok(_) => HttpResponse::Ok().finish(),
+            Err(e) => HttpResponse::InternalServerError().body(format!("Failed to change wallpaper: {}", e)),
+        }
+    }
+}

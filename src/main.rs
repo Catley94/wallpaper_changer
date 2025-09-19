@@ -17,6 +17,7 @@ async fn main() -> std::io::Result<()> {
             .service(api::create_tag)
             .service(api::tag_image)
             .service(api::list_collections)
+            .service(api::change_wallpaper_from_path)
     })
         .bind(("127.0.0.1:8080"))?
         .run()

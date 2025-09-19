@@ -1,5 +1,6 @@
 // lib/main.dart
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -7,7 +8,8 @@ import 'dart:convert';
 import 'models/search_response.dart';
 import 'models/collections_response.dart';
 import 'package:path/path.dart' as path;
-import 'models/collections_response.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 
 // Building app Linux (plus production build): https://docs.flutter.dev/platform-integration/linux/building
@@ -67,6 +69,122 @@ class _CollectionsPageState extends State<CollectionsPage> {
   bool _loading = false;
   List<CollectionTag> _tags = [];
 
+  // Slideshow state
+  Timer? _slideshowTimer;
+  List<String> _slideshowImages = [];
+  int _slideshowIndex = 0;
+  Duration? _slideshowInterval;
+
+  bool get _isSlideshowRunning => _slideshowTimer != null;
+
+  Future<void> _setWallpaperFromPath(String p) async {
+    try {
+      final resp = await http.post(
+        Uri.parse('http://127.0.0.1:8080/change-wallpaper-from-path'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'path': path.normalize(p).replaceAll('\\', '/') }),
+      );
+      if (resp.statusCode != 200) {
+        if (mounted) {
+          final body = resp.body.isNotEmpty ? '\n${resp.body}' : '';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to set wallpaper (${resp.statusCode})$body')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<Duration?> _askInterval() async {
+    final c = TextEditingController(text: '5');
+    final res = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Change interval (minutes)') ,
+          content: TextField(
+            controller: c,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: 'e.g. 5 (0 for no loop)'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.pop(context, c.text.trim()), child: const Text('OK')),
+          ],
+        );
+      }
+    );
+    if (res == null) return null;
+    final mins = int.tryParse(res) ?? 0;
+    if (mins <= 0) return Duration.zero; // means set once, no loop
+    return Duration(minutes: mins);
+  }
+
+  void _stopSlideshow() {
+    _slideshowTimer?.cancel();
+    _slideshowTimer = null;
+    _slideshowImages = [];
+    _slideshowIndex = 0;
+    _slideshowInterval = null;
+    setState(() {});
+  }
+
+  Future<void> _startSlideshow(List<String> images) async {
+    if (images.isEmpty) return;
+    final interval = await _askInterval();
+    if (interval == null) return; // cancelled
+    _slideshowImages = images.map((e) => path.normalize(e).replaceAll('\\', '/')).toList();
+    _slideshowIndex = 0;
+    _slideshowInterval = interval;
+
+    // Always set first image immediately
+    await _setWallpaperFromPath(_slideshowImages[_slideshowIndex % _slideshowImages.length]);
+    _slideshowIndex++;
+
+    // If zero interval => no loop
+    if (interval == Duration.zero) {
+      _stopSlideshow();
+      return;
+    }
+
+    _slideshowTimer?.cancel();
+    _slideshowTimer = Timer.periodic(interval, (_) async {
+      if (_slideshowImages.isEmpty) return;
+      final img = _slideshowImages[_slideshowIndex % _slideshowImages.length];
+      _slideshowIndex++;
+      await _setWallpaperFromPath(img);
+    });
+    setState(() {});
+  }
+
+  Future<void> _pickSingleImage() async {
+    final typeGroup = XTypeGroup(label: 'media', extensions: ['jpg','jpeg','png','bmp','gif','webp','svg','mp4','mkv','webm']);
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null) return;
+    await _setWallpaperFromPath(file.path);
+  }
+
+  Future<void> _pickFolderAndStart() async {
+    final dirPath = await getDirectoryPath();
+    if (dirPath == null) return;
+    final dir = Directory(dirPath);
+    if (!await dir.exists()) return;
+    final images = await dir
+        .list()
+        .where((e) => e is File)
+        .map((e) => (e as File).path)
+        .where((p) {
+          final ext = path.extension(p).toLowerCase();
+          return ['.jpg','.jpeg','.png','.bmp','.gif','.webp','.svg'].contains(ext);
+        })
+        .toList();
+    await _startSlideshow(images);
+  }
+
   Future<void> _load() async {
     setState(() { _loading = true; });
     try {
@@ -98,7 +216,28 @@ class _CollectionsPageState extends State<CollectionsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Collections')),
+      appBar: AppBar(
+        title: const Text('Collections'),
+        actions: [
+          if (_isSlideshowRunning)
+            TextButton.icon(
+              onPressed: _stopSlideshow,
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              icon: const Icon(Icons.stop_circle),
+              label: const Text('Stop'),
+            ),
+          IconButton(
+            tooltip: 'Choose Image',
+            icon: const Icon(Icons.image),
+            onPressed: _pickSingleImage,
+          ),
+          IconButton(
+            tooltip: 'Choose Folder',
+            icon: const Icon(Icons.folder_open),
+            onPressed: _pickFolderAndStart,
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _tags.isEmpty
@@ -124,22 +263,44 @@ class _CollectionsPageState extends State<CollectionsPage> {
                             itemCount: tag.images.length,
                             itemBuilder: (context, j) {
                               final p = path.normalize(tag.images[j]).replaceAll('\\', '/');
+                              final ext = path.extension(p).toLowerCase();
+                              final isSvg = ext == '.svg';
                               return ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(p),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey[200],
-                                      child: const Center(child: Icon(Icons.error)),
-                                    );
-                                  },
-                                ),
+                                child: isSvg
+                                    ? SvgPicture.file(
+                                        File(p),
+                                        fit: BoxFit.cover,
+                                        placeholderBuilder: (context) => Container(
+                                          color: Colors.grey[200],
+                                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                        ),
+                                      )
+                                    : Image.file(
+                                        File(p),
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.grey[200],
+                                            child: const Center(child: Icon(Icons.error)),
+                                          );
+                                        },
+                                      ),
                               );
                             },
                           ),
-                        )
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: () => _startSlideshow(tag.images),
+                              icon: const Icon(Icons.play_circle_fill),
+                              label: const Text('Slideshow'),
+                            ),
+                          ),
+                        ),
                       ],
                     );
                   },
@@ -180,6 +341,13 @@ class _CollectionsPageState extends State<CollectionsPage> {
         label: const Text('New Tag'), icon: const Icon(Icons.add),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _slideshowTimer?.cancel();
+    _slideshowTimer = null;
+    super.dispose();
   }
 }
 
@@ -405,18 +573,32 @@ class _WallpaperPageState extends State<WallpaperPage> {
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    File(_thumbnailPaths[index]),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey[200],
-                                        child: const Center(
-                                          child: Icon(Icons.error),
+                                  child: (() {
+                                    final p = _thumbnailPaths[index];
+                                    final ext = path.extension(p).toLowerCase();
+                                    if (ext == '.svg') {
+                                      return SvgPicture.file(
+                                        File(p),
+                                        fit: BoxFit.cover,
+                                        placeholderBuilder: (context) => Container(
+                                          color: Colors.grey[200],
+                                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                                         ),
                                       );
-                                    },
-                                  ),
+                                    }
+                                    return Image.file(
+                                      File(p),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey[200],
+                                          child: const Center(
+                                            child: Icon(Icons.error),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  })(),
                                 ),
                               ),
                             );
